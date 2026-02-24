@@ -619,6 +619,7 @@
     },
     "showPasswordOnSeparateScreen": false,
     "enabled": true,
-    "subDomain": "https://staging.ampath.or.ke"
+    "subDomain": "https://staging.ampath.or.ke",
+    "otpKey": "22a4258b969b43d284a69f293a3dff1e"
   }
 }
