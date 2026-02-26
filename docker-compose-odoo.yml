@@ -16,7 +16,7 @@ services:
   # ---------- Postgres (Odoo DB) ----------
   # AMPATH-built image; set ODOO_POSTGRES_IMAGE to override (e.g. postgres:13 or another tag)
   postgresql:
-    image: ${ODOO_POSTGRES_IMAGE:-ghcr.io/ampath/o3-amrs-odoo-postgres:latest}
+    image: ${ODOO_POSTGRES_IMAGE:-ghcr.io/ampath/o3-amrs-o3-amrs-odoo-postgres:latest}
     command: postgres -c wal_level=logical -c max_wal_senders=10 -c max_replication_slots=10 -c max_connections=200 -c max_slot_wal_keep_size=2GB
     environment:
       POSTGRES_DB: postgres
@@ -61,7 +61,7 @@ services:
     networks:
       - ozone
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:-3307}:3306"
     restart: unless-stopped
     volumes:
       - "${MYSQL_DATADIR:-mysql-data}:/var/lib/mysql"
@@ -93,7 +93,7 @@ services:
       - ADDONS=${ODOO_ADDONS:-sale_management,stock,account_account,purchase,mrp,odoo_initializer,mrp_product_expiry,product_expiry,l10n_generic_coa}
       - INITIALIZER_DATA_FILES_PATH=/mnt/odoo_config
       - INITIALIZER_CONFIG_FILE_PATH=/mnt/odoo_config/initializer_config.json
-    image: ${ODOO_IMAGE:-ghcr.io/ampath/o3-amrs-odoo:latest}
+    image: ${ODOO_IMAGE:-ghcr.io/ampath/o3-amrs-o3-amrs-odoo:latest}
     networks:
       ozone:
         aliases:
@@ -106,7 +106,6 @@ services:
       - "${ODOO_FILESTORE:-odoo-filestore}:/var/lib/odoo/filestore"
       - "${ODOO_EXTRA_ADDONS:-odoo-extra-addons}:/mnt/extra-addons"
       - "${ODOO_CONFIG_PATH:-odoo-config}:/mnt/odoo_config"
-      - "${ODOO_CONFIG_FILE_PATH:-odoo-config}:/etc/properties/odoo.conf"
       - "${ODOO_CONFIG_CHECKSUMS_PATH:-odoo-checksums}:/mnt/checksums"
 
   # ---------- FHIR Odoo facade ----------
@@ -171,7 +170,8 @@ services:
       - EIP_ODOO_FHIR_PASSWORD=${ODOO_PASSWORD:-admin}
       - EIP_PRODUCT_SYNC_INITIAL_DELAY=${EIP_PRODUCT_SYNC_INITIAL_DELAY:-60000}
       - EIP_PRODUCT_SYNC_DELAY=${EIP_PRODUCT_SYNC_DELAY:-86400000}
-    image: mekomsolutions/eip-client
+    # AMPATH-built EIP image with bundled routes; override with EIP_ODOO_OPENMRS_IMAGE if needed
+    image: ${EIP_ODOO_OPENMRS_IMAGE:-ghcr.io/ampath/o3-amrs-eip-odoo-openmrs:latest}
     networks:
       ozone:
         aliases:
@@ -179,7 +179,6 @@ services:
           - eip-odoo-openmrs
     restart: unless-stopped
     volumes:
-      - "${EIP_ODOO_OPENMRS_ROUTES_PATH:-./eip-odoo-openmrs-routes}:/eip-client/routes"
       - eip-home-odoo:/eip-home
 
 volumes:

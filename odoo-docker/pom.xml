@@ -20,6 +20,7 @@
     <odoo.initializer.version>2.4.0-SNAPSHOT</odoo.initializer.version>
     <odoo.postgres.image>ghcr.io/ampath/o3-amrs-odoo-postgres</odoo.postgres.image>
     <odoo.image>ghcr.io/ampath/o3-amrs-odoo</odoo.image>
+    <eip.odoo.openmrs.image>ghcr.io/ampath/o3-amrs-eip-odoo-openmrs</eip.odoo.openmrs.image>
     <skip.docker.build>false</skip.docker.build>
   </properties>
 
@@ -91,6 +92,10 @@
                 <copy todir="${odoo.build}/binaries/odoo" overwrite="true" failonerror="true">
                   <fileset dir="${project.build.directory}/ozone-distro/binaries/odoo" />
                 </copy>
+                <!-- EIP Odoo–OpenMRS routes from distro binaries (mirrors Ozone bundled-docker) -->
+                <copy todir="${odoo.build}/binaries/eip-odoo-openmrs" overwrite="true" failonerror="true">
+                  <fileset dir="${project.build.directory}/ozone-distro/binaries/eip-odoo-openmrs" />
+                </copy>
               </target>
             </configuration>
           </execution>
@@ -138,6 +143,7 @@
                   <includes>
                     <include>postgresql/Dockerfile</include>
                     <include>odoo/Dockerfile</include>
+                    <include>eip-odoo-openmrs/Dockerfile</include>
                   </includes>
                   <targetPath>.</targetPath>
                 </resource>
@@ -201,6 +207,28 @@
                 <argument>${odoo.image}:${project.version}</argument>
                 <argument>-t</argument>
                 <argument>${odoo.image}:latest</argument>
+                <argument>.</argument>
+              </arguments>
+              <workingDirectory>${project.build.directory}/odoo-build</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>docker-build-eip-odoo-openmrs</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${skip.docker.build}</skip>
+              <executable>docker</executable>
+              <arguments>
+                <argument>build</argument>
+                <argument>-f</argument>
+                <argument>eip-odoo-openmrs/Dockerfile</argument>
+                <argument>-t</argument>
+                <argument>${eip.odoo.openmrs.image}:${project.version}</argument>
+                <argument>-t</argument>
+                <argument>${eip.odoo.openmrs.image}:latest</argument>
                 <argument>.</argument>
               </arguments>
               <workingDirectory>${project.build.directory}/odoo-build</workingDirectory>
