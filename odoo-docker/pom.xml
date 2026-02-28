@@ -96,6 +96,10 @@
                 <copy todir="${odoo.build}/binaries/eip-odoo-openmrs" overwrite="true" failonerror="true">
                   <fileset dir="${project.build.directory}/ozone-distro/binaries/eip-odoo-openmrs" />
                 </copy>
+                <!-- Distro Odoo configs overwrite Maven dependency (ozone-distro); distro takes precedence -->
+                <copy todir="${odoo.build}/configs/odoo" overwrite="true" failonerror="false">
+                  <fileset dir="${project.parent.basedir}/distro/configs/odoo" />
+                </copy>
               </target>
             </configuration>
           </execution>
