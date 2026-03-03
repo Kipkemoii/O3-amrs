@@ -1,0 +1,2 @@
+id,name,categ_id/id,type,uom_id/id,uom_po_id/id,invoice_policy,lst_price,standard_price
+init.a89541d2-1350-11df-a1f1-0026b9348838,Multi-Vitamin Adult,init.categ_products_drug_orders,product,init.1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,init.1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ordered quantities,1.00,0.80

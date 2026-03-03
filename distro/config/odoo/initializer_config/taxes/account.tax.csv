@@ -1,0 +1,3 @@
+id,amount,company_id/id,sequence,amount_type,tax_group_id/id,name,type_tax_use,active
+init.1_sale_tax_template,15,base.main_company,1,Percentage of Price,account.1_tax_group_15,Tax 16.00%,Sales,False
+init.1_purchase_tax_template,15,base.main_company,1,Percentage of Price,account.1_tax_group_15,Tax 16.00%,Purchases,False

@@ -1,0 +1,3 @@
+id,name,categ_id/id,type,purchase_ok,invoice_policy,lst_price
+init.51aaaadb-00a8-4cf9-b29e-ab7a6a983a4,Urine microscopy panel,init.categ_services_lab_test_orders,service,FALSE,Ordered quantities,5.4
+init.a898f50c-1350-11df-a1f1-0026b9348838,Complete blood count,init.categ_services_lab_test_orders,service,FALSE,Ordered quantities,60.0
