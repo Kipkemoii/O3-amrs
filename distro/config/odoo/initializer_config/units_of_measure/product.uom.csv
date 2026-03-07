@@ -1,0 +1,11 @@
+id,name,factor,category_id/id,rounding,uom_type
+init.2952c978-5d2a-470b-b11b-0f50b23f752f,Milliliter,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.b525e55c-c5e5-45b3-8bee-d319e5c2c79e,Puff,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.8f5c7e25-0805-442d-9d3b-a6f4abb33c30,Milligram,1,uom.product_uom_categ_unit,0.01,Smaller than the reference Unit of Measure
+init.a8a0810a-1350-11df-a1f1-0026b9348838,Capsule,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a07f8e-1350-11df-a1f1-0026b9348838,Tablet,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a0630a-1350-11df-a1f1-0026b9348838,Number of Tablets,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a063c8-1350-11df-a1f1-0026b9348838,Number of Milligrams,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.ea404923-fe2b-4812-aec5-3be7fbe712f7,Number of Capsules,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.71d7a30b-ac5a-418b-8c4c-1b61b0025129,Number of Puffs,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a08286-1350-11df-a1f1-0026b9348838,Number of Milliliters,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure

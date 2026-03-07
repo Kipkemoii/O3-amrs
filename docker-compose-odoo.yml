@@ -30,8 +30,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - ozone
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     restart: unless-stopped
@@ -58,8 +56,6 @@ services:
       EIP_DB_PASSWORD_ODOO: ${EIP_DB_PASSWORD_ODOO:-password}
     healthcheck:
       test: "exit 0"
-    networks:
-      - ozone
     ports:
       - "${MYSQL_PORT:-3307}:3306"
     restart: unless-stopped
@@ -69,8 +65,6 @@ services:
   # ---------- Env substitution (Odoo config) ----------
   env-substitution:
     image: mekomsolutions/env-substitution
-    networks:
-      - ozone
     restart: on-failure
     volumes:
       - "${DISTRO_PATH:-.}:/opt/env-substitution/files"
@@ -93,19 +87,14 @@ services:
       - ADDONS=${ODOO_ADDONS:-sale_management,stock,account_account,purchase,mrp,odoo_initializer,mrp_product_expiry,product_expiry,l10n_generic_coa}
       - INITIALIZER_DATA_FILES_PATH=/mnt/odoo_config
       - INITIALIZER_CONFIG_FILE_PATH=/mnt/odoo_config/initializer_config.json
-    image: ${ODOO_IMAGE:-ghcr.io/ampath/o3-amrs-o3-amrs-odoo:latest}
-    networks:
-      ozone:
-        aliases:
-          - odoo
-      web:
+    image: ${ODOO_IMAGE:-ghcr.io/ampath/o3-amrs-odoo:latest}
     ports:
       - "${ODOO_PUBLIC_PORT:-8069}:8069"
     restart: unless-stopped
     volumes:
       - "${ODOO_FILESTORE:-odoo-filestore}:/var/lib/odoo/filestore"
       - "${ODOO_EXTRA_ADDONS:-odoo-extra-addons}:/mnt/extra-addons"
-      - "${ODOO_CONFIG_PATH:-odoo-config}:/mnt/odoo_config"
+      #- "${ODOO_CONFIG_PATH:-odoo-config}:/mnt/odoo_config"
       - "${ODOO_CONFIG_CHECKSUMS_PATH:-odoo-checksums}:/mnt/checksums"
 
   # ---------- FHIR Odoo facade ----------
@@ -121,13 +110,6 @@ services:
       - ODOO_DATABASE=${ODOO_DATABASE:-odoo}
       - EIP_ODOO_DRUGS_CATEGORY_EXT_ID=${EIP_ODOO_DRUGS_CATEGORY_EXT_ID:-categ_products_drug_orders}
     image: mekomsolutions/fhir-odoo
-    networks:
-      web:
-      ozone:
-        aliases:
-          - fhir-erp
-          - fhir-odoo
-          - odoo-fhir-facade
     ports:
       - "${FHIR_ODOO_PUBLIC_PORT:-8083}:8080"
     restart: unless-stopped
@@ -151,8 +133,9 @@ services:
       - ODOO_URL=http://odoo:8069
       - OPENMRS_URL=${OPENMRS_URL:-http://backend:8080/openmrs}
       - EIP_PROFILE=${EIP_PROFILE:-prod}
-      - MYSQL_ADMIN_USER=root
-      - MYSQL_ADMIN_USER_PASSWORD=${MYSQL_ROOT_PASSWORD:-password}
+      - MYSQL_ADMIN_USER=${OPENMRS_DB_HOST}
+      - MYSQL_ADMIN_USER=${OPENMRS_DB_USER}
+      - MYSQL_ADMIN_USER_PASSWORD=${OPENMRS_DB_PASSWORD}
       - OPENMRS_DB_HOST=${OPENMRS_DB_HOST:-db}
       - OPENMRS_DB_PORT=${OPENMRS_DB_PORT:-3306}
       - OPENMRS_DB_NAME=${OPENMRS_DB_NAME:-amrs}
@@ -165,18 +148,27 @@ services:
       - EIP_FHIR_USERNAME=${OPENMRS_USER:-admin}
       - EIP_FHIR_PASSWORD=${OPENMRS_PASSWORD:-Admin123}
       - EIP_TEST_ORDER_TYPE_UUID=${EIP_TEST_ORDER_TYPE_UUID:-}
-      - EIP_ODOO_FHIR_SERVER_URL=${EIP_ODOO_FHIR_SERVER_URL:-http://fhir-odoo:8080/odoo/fhir/R4}
+      - EIP_IMAGING_ORDER_TYPE_UUID=${EIP_IMAGING_ORDER_TYPE_UUID}
+      - EIP_PROCEDURE_ORDER_TYPE_UUID=${EIP_PROCEDURE_ORDER_TYPE_UUID}
+      - EIP_DRUG_ORDER_TYPE_UUID=${EIP_DRUG_ORDER_TYPE_UUID}
+      - EIP_ODOO_FHIR_SERVER_URL=${EIP_ODOO_FHIR_SERVER_URL:-http://fhir-odoo:8080}
       - EIP_ODOO_FHIR_USERNAME=${ODOO_USER:-admin}
       - EIP_ODOO_FHIR_PASSWORD=${ODOO_PASSWORD:-admin}
       - EIP_PRODUCT_SYNC_INITIAL_DELAY=${EIP_PRODUCT_SYNC_INITIAL_DELAY:-60000}
-      - EIP_PRODUCT_SYNC_DELAY=${EIP_PRODUCT_SYNC_DELAY:-86400000}
+      - EIP_PRODUCT_SYNC_DELAY=${EIP_PRODUCT_SYNC_DELAY:-300000}
+      - WEIGHT_CONCEPT_UUID=${WEIGHT_CONCEPT_UUID:-a8a660ca-1350-11df-a1f1-0026b9348838}
+      - HEIGHT_CONCEPT_UUID=${HEIGHT_CONCEPT_UUID:-a8a6619c-1350-11df-a1f1-0026b9348838}
+      - EIP_WATCHED_TABLES=${EIP_WATCHED_TABLES:-patient,person_name,person_address,patient_identifier,orders,test_order,drug_order}
+      - DB_EVENT_DESTINATIONS_ODOO=${DB_EVENT_DESTINATIONS_ODOO:-direct:odoo-event-listener}
+      - CREATE_CUSTOMER_IF_NOT_EXIST=${CREATE_CUSTOMER_IF_NOT_EXIST:-false}
+      - ODOO_CUSTOMER_EXTERNAL_ID=${ODOO_CUSTOMER_EXTERNAL_ID:-comment}
+      - ODOO_CUSTOMER_DOB_FIELD=${ODOO_CUSTOMER_DOB_FIELD:-}
+      - ODOO_CUSTOMER_WEIGHT_FIELD=${ODOO_CUSTOMER_WEIGHT_FIELD:-}
+      - EMR_WEIGHT_CONCEPT=${EMR_WEIGHT_CONCEPT:-a8a660ca-1350-11df-a1f1-0026b9348838}
+      - ODOO_ENABLE_EXTRA_CUSTOMER_FIELDS_ROUTE=${ODOO_ENABLE_EXTRA_CUSTOMER_FIELDS_ROUTE:-false}
+      - ODOO_ENABLE_EXTRA_QUOTATION_FIELDS_ROUTE=${ODOO_ENABLE_EXTRA_QUOTATION_FIELDS_ROUTE:-false}
     # AMPATH-built EIP image with bundled routes; override with EIP_ODOO_OPENMRS_IMAGE if needed
     image: ${EIP_ODOO_OPENMRS_IMAGE:-ghcr.io/ampath/o3-amrs-eip-odoo-openmrs:latest}
-    networks:
-      ozone:
-        aliases:
-          - eip-client-odoo
-          - eip-odoo-openmrs
     restart: unless-stopped
     volumes:
       - eip-home-odoo:/eip-home
