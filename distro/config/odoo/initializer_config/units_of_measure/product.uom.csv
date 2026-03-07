@@ -9,3 +9,23 @@ init.a8a063c8-1350-11df-a1f1-0026b9348838,Number of Milligrams,1,uom.product_uom
 init.ea404923-fe2b-4812-aec5-3be7fbe712f7,Number of Capsules,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
 init.71d7a30b-ac5a-418b-8c4c-1b61b0025129,Number of Puffs,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
 init.a8a08286-1350-11df-a1f1-0026b9348838,Number of Milliliters,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.08709444-ac83-4af2-a8e5-86d91bb565b3,Oral Suspension,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.0af16f27-aaa0-4bb1-b1a6-43734dab1a5c,Solution,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.0c5cfbf4-d565-454d-a832-5ec03125a319,Depot for Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.20f05920-0a4f-4708-af09-b20fe7185576,Lotion,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.2503d4fb-a633-4ea3-9879-8ebb759c573e,Reconstituted Powder for Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.2c731799-e52f-40cd-864d-fb12a89a1f81,Cream,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.3392d4ed-88e1-46b4-bc17-9e8d332bc364,Pessary,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.3fbfabc6-9e78-4c70-85ee-8e66fc2418c5,Drops,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.4b33292d-e623-4772-99aa-2c6a92616685,Suspension for Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.5185e5be-74af-43d1-ab6e-8bacdb835d5c,Suppository,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.56624b7a-6f24-40aa-af30-cad799d110c5,Metered-Dose Inhaler,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.61391823-27aa-4d7a-aac3-ef2b808135a9,Intramuscular Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.89791287-a474-4a34-b8a5-7357da93ebec,Ointment,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a07ed0-1350-11df-a1f1-0026b9348838,Syrup,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8a0804c-1350-11df-a1f1-0026b9348838,Powder,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.a8d2a6cb-1652-4d8e-a830-226ded345345,Subcutaneous Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.bcf5e6df-0229-4562-9d53-9432afc68d23,Delayed Release Granules,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.cf2d112e-dfa7-45df-9ff2-25f43bab80df,Emulsion,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.db0c5937-3874-4eae-9566-9a645ad7ac65,Oral Administration,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
+init.e5e1fa57-2b8b-4aef-9b8c-8378b5382791,Solution for Injection,1,uom.product_uom_categ_unit,0.01,Bigger than the reference Unit of Measure
