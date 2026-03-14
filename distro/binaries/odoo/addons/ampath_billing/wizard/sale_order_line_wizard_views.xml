@@ -13,8 +13,8 @@
                             <h3>Select lines and choose an action</h3>
                         </div>
                         <field name="line_ids" nolabel="1">
-                            <tree editable="bottom" decoration-muted="not selected">
-                                <field name="selected" widget="boolean_toggle"/>
+                            <tree editable="bottom">
+                                <field name="selected"/>
                                 <field name="product_id" readonly="1"/>
                                 <field name="product_uom_qty" readonly="1" string="Qty"/>
                                 <field name="price_unit" readonly="1"/>
