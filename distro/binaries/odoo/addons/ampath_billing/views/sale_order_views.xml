@@ -6,18 +6,16 @@
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='order_line']/tree" position="inside">
-                    <header>
-                        <button name="action_bulk_waive" type="object"
-                                string="Waive" class="btn-secondary"/>
-                        <button name="action_bulk_fhir_claim" type="object"
-                                string="Claim" class="btn-secondary"/>
-                        <button name="action_bulk_individual_payment" type="object"
-                                string="Pay" class="btn-primary"/>
-                    </header>
                     <field name="insurance_provider_id" optional="show"/>
                     <field name="claim_status" widget="badge"
                            decoration-info="claim_status == 'submitted'"
                            decoration-success="claim_status == 'approved'"/>
+                    <button name="action_bulk_waive" type="object"
+                            string="Waive" class="btn-link"/>
+                    <button name="action_bulk_fhir_claim" type="object"
+                            string="Claim" class="btn-link"/>
+                    <button name="action_bulk_individual_payment" type="object"
+                            string="Pay" class="btn-link"/>
                 </xpath>
             </field>
         </record>

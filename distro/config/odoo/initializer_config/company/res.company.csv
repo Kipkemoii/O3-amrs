@@ -1,2 +1,2 @@
-"id","name","currency_id/id","email","website",logo
-"base.main_company","AMPATH Kenya","base.KES","ampathkenya.org","https://www.ampathkenya.org/",
+"id","name","currency_id/id","email","website",logo,"street","city","country_id/id","state_id/id","zip","phone"
+"base.main_company","AMPATH Kenya","base.KES","ampathkenya.org","https://www.ampathkenya.org/",,"P.O. Box 4606","Eldoret","base.ke","","30100","+254 53 203 3471"
