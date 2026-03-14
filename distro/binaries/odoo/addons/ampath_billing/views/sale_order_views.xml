@@ -5,6 +5,12 @@
             <field name="model">sale.order</field>
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
+                <xpath expr="//field[@name='order_line']" position="before">
+                    <button name="%(ampath_billing.action_sale_order_line_wizard)d"
+                            type="action" string="⚡ Bulk Actions"
+                            class="btn-secondary mb-2"
+                            icon="fa-tasks"/>
+                </xpath>
                 <xpath expr="//field[@name='order_line']/tree" position="inside">
                     <field name="insurance_provider_id" optional="show"/>
                     <field name="claim_status" widget="badge"
