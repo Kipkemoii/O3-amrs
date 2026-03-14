@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sale_order_line_ampath,sale.order.line.ampath,sale.model_sale_order_line,,1,1,1,1
 access_account_move_line_ampath,account.move.line.ampath,account.model_account_move_line,,1,1,1,1
 access_sale_order_line_wizard,sale.order.line.wizard,model_sale_order_line_wizard,,1,1,1,1
+access_sale_order_line_wizard_line,sale.order.line.wizard.line,model_sale_order_line_wizard_line,,1,1,1,1
