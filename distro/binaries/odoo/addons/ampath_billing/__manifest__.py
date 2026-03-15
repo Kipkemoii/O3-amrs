@@ -8,6 +8,7 @@
     'data': [
         'security/ir.model.access.csv',
         'wizard/sale_order_line_wizard_views.xml',
+        'views/sale_advance_payment_views.xml',
         'views/sale_order_views.xml',
         'views/account_move_views.xml',
     ],

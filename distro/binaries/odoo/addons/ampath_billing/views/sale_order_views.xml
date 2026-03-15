@@ -6,7 +6,7 @@
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='order_line']" position="before">
-                    <div class="mb-2">
+                    <div class="mb-2 text-end">
                         <button name="%(ampath_billing.action_sale_order_line_wizard)d"
                                 type="action" string="⚡ Bulk Actions (Waive / Claim / Pay)"
                                 class="btn-primary"

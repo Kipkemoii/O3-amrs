@@ -39,16 +39,31 @@ class SaleOrderLine(models.Model):
             line.write({'claim_status': 'submitted', 'fhir_claim_id': 'FHIR-SO-TMP'})
 
     def action_bulk_individual_payment(self):
-        """Create a down payment for specific lines."""
+        """Create a down payment for selected lines."""
         total_to_pay = sum(line.price_total for line in self)
+        summary_lines = []
+        for line in self:
+            product = line.product_id.name or line.name or _('Unknown')
+            summary_lines.append(
+                "%s  ×%g  %s" % (product, line.product_uom_qty, line.price_total)
+            )
+        product_names = ', '.join(
+            name for name in self.mapped('product_id.name') if name
+        )
+        view_id = self.env.ref(
+            'ampath_billing.view_sale_advance_payment_inv_ampath'
+        ).id
         return {
             'name': _('Pay Selected Items'),
             'res_model': 'sale.advance.payment.inv',
             'view_mode': 'form',
+            'view_id': view_id,
             'context': {
-                'active_ids': [self.order_id.id],
+                'active_ids': self.mapped('order_id').ids,
                 'default_advance_payment_method': 'fixed',
                 'default_fixed_amount': total_to_pay,
+                'ampath_selected_products': product_names,
+                'ampath_product_summary_detail': '\n'.join(summary_lines),
             },
             'target': 'new',
             'type': 'ir.actions.act_window',
