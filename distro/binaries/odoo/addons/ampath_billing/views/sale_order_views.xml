@@ -8,7 +8,7 @@
                 <xpath expr="//field[@name='order_line']" position="before">
                     <field name="billing_actions_visible" invisible="1"/>
                     <div class="mb-2 text-end"
-                         attrs="{'invisible': [('billing_actions_visible', '=', False)]}">
+                         invisible="not billing_actions_visible">
                         <button name="%(ampath_billing.action_sale_order_line_wizard)d"
                                 type="action" string="⚡ Bulk Actions (Waive / Claim / Pay)"
                                 class="btn-primary"
@@ -23,13 +23,13 @@
                     <field name="billing_actions_visible" column_invisible="1"/>
                     <button name="action_bulk_waive" type="object"
                             string="Waive" class="btn-link"
-                            attrs="{'invisible': [('billing_actions_visible', '=', False)]}"/>
+                            invisible="not billing_actions_visible"/>
                     <button name="action_bulk_fhir_claim" type="object"
                             string="Claim" class="btn-link"
-                            attrs="{'invisible': [('billing_actions_visible', '=', False)]}"/>
+                            invisible="not billing_actions_visible"/>
                     <button name="action_bulk_individual_payment" type="object"
                             string="Pay" class="btn-link"
-                            attrs="{'invisible': [('billing_actions_visible', '=', False)]}"/>
+                            invisible="not billing_actions_visible"/>
                 </xpath>
             </field>
         </record>
