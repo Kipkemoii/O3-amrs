@@ -84,7 +84,7 @@ services:
       - HOST=${POSTGRES_DB_HOST:-postgresql}
       - USER=${ODOO_DB_USER:-odoo}
       - PASSWORD=${ODOO_DB_PASSWORD:-password}
-      - ADDONS=${ODOO_ADDONS:-sale_management,stock,account_account,purchase,mrp,odoo_initializer,mrp_product_expiry,product_expiry,l10n_generic_coa}
+      - ADDONS=${ODOO_ADDONS:-sale_management,stock,account_account,purchase,mrp,odoo_initializer,mrp_product_expiry,product_expiry,l10n_generic_coa,ampath_billing,l10n_ke,l10n_ke_reports}
       - INITIALIZER_DATA_FILES_PATH=/mnt/odoo_config
       - INITIALIZER_CONFIG_FILE_PATH=/mnt/odoo_config/initializer_config.json
     image: ${ODOO_IMAGE:-ghcr.io/ampath/o3-amrs-odoo:latest}
@@ -93,7 +93,7 @@ services:
     restart: unless-stopped
     volumes:
       - "${ODOO_FILESTORE:-odoo-filestore}:/var/lib/odoo/filestore"
-      - "${ODOO_EXTRA_ADDONS:-odoo-extra-addons}:/mnt/extra-addons"
+     # - "${ODOO_EXTRA_ADDONS:-odoo-extra-addons}:/mnt/extra-addons"
       #- "${ODOO_CONFIG_PATH:-odoo-config}:/mnt/odoo_config"
       - "${ODOO_CONFIG_CHECKSUMS_PATH:-odoo-checksums}:/mnt/checksums"
 
@@ -173,11 +173,3 @@ services:
     volumes:
       - eip-home-odoo:/eip-home
 
-volumes:
-  postgresql-data:
-  mysql-data:
-  odoo-filestore:
-  odoo-config:
-  odoo-extra-addons:
-  odoo-checksums:
-  eip-home-odoo:
