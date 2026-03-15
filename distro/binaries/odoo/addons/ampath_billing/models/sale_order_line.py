@@ -14,6 +14,9 @@ class SaleOrderLine(models.Model):
     
     insurance_provider_id = fields.Many2one('res.partner', string="Insurance Payer")
     fhir_claim_id = fields.Char("FHIR ID", copy=False)
+    billing_actions_visible = fields.Boolean(
+        related='order_id.billing_actions_visible',
+    )
 
     def _prepare_invoice_line(self, **optional_values):
         """Map custom fields from SO line to Invoice line."""
