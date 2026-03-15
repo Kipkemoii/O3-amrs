@@ -1,0 +1,6 @@
+id,name,type,code,currency_id/id,profit_account_id/id,loss_account_id/id
+init.journal_sale,Customer Invoices,sale,INV,base.KES,,
+init.journal_purchase,Vendor Bills,purchase,BILL,base.KES,,
+init.journal_cash,Cash,cash,CSH1,base.KES,account.1_cash_diff_income,account.1_cash_diff_expense
+init.journal_bank,Bank,bank,BNK1,base.KES,,
+init.journal_journal,Journal,general,JOU,base.KES,,
