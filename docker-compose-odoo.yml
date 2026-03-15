@@ -173,3 +173,11 @@ services:
     volumes:
       - eip-home-odoo:/eip-home
 
+volumes:
+  postgresql-data:
+  mysql-data:
+  odoo-filestore:
+  odoo-config:
+  odoo-extra-addons:
+  odoo-checksums:
+  eip-home-odoo:
