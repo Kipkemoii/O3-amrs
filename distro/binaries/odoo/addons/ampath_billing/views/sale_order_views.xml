@@ -5,32 +5,67 @@
             <field name="model">sale.order</field>
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
+
+                <!-- Bulk action buttons above the order lines -->
                 <xpath expr="//field[@name='order_line']" position="before">
                     <field name="billing_actions_visible" invisible="1"/>
-                    <div class="mb-2 text-end"
+                    <div class="d-flex gap-2 mb-2 align-items-center"
                          invisible="not billing_actions_visible">
-                        <button name="%(ampath_billing.action_sale_order_line_wizard)d"
-                                type="action" string="⚡ Bulk Actions (Waive / Claim / Pay)"
-                                class="btn-primary"
-                                icon="fa-tasks"/>
+                        <span class="text-muted small me-1">
+                            Check lines below, then:
+                        </span>
+                        <button name="action_waive_selected" type="object"
+                                string="🏷️ Waive" class="btn-warning btn-sm"
+                                confirm="Apply 100%% discount to all checked lines?"/>
+                        <button name="action_claim_selected" type="object"
+                                string="📋 Claim" class="btn-info btn-sm"
+                                confirm="Submit FHIR claims for all checked lines?"/>
+                        <button name="action_pay_selected" type="object"
+                                string="💰 Pay" class="btn-primary btn-sm"/>
                     </div>
                 </xpath>
+
+                <!-- Dim locked rows -->
+                <xpath expr="//field[@name='order_line']/tree" position="attributes">
+                    <attribute name="decoration-muted">is_line_locked</attribute>
+                </xpath>
+
+                <!-- Add custom columns to the order lines tree -->
                 <xpath expr="//field[@name='order_line']/tree" position="inside">
+
+                    <!-- Hidden state fields used by expressions below -->
+                    <field name="is_line_locked" column_invisible="1"/>
+                    <field name="downpayment_line_id" column_invisible="1"/>
+
+                    <!-- Selection checkbox: disabled for down payments, new lines, and locked lines -->
+                    <field name="selected"
+                           widget="boolean_toggle"
+                           optional="show"
+                           readonly="is_downpayment or not id or is_line_locked"/>
+
+                    <!-- Lock/pending indicator: 🔒 = paid DP, ⏳ = DP in progress -->
+                    <field name="lock_indicator" string="" readonly="1" optional="show"/>
+
                     <field name="insurance_provider_id" optional="show"/>
-                    <field name="claim_status" widget="badge"
+                    <field name="claim_status" widget="badge" optional="show"
                            decoration-info="claim_status == 'submitted'"
                            decoration-success="claim_status == 'approved'"/>
-                    <field name="billing_actions_visible" column_invisible="1"/>
-                    <button name="action_bulk_waive" type="object"
-                            string="Waive" class="btn-link"
-                            invisible="not billing_actions_visible"/>
-                    <button name="action_bulk_fhir_claim" type="object"
-                            string="Claim" class="btn-link"
-                            invisible="not billing_actions_visible"/>
-                    <button name="action_bulk_individual_payment" type="object"
-                            string="Pay" class="btn-link"
-                            invisible="not billing_actions_visible"/>
                 </xpath>
+
+                <!-- Lock key price columns when the line is covered by a paid DP -->
+                <xpath expr="//field[@name='order_line']/tree//field[@name='product_uom_qty']"
+                       position="attributes">
+                    <attribute name="readonly">is_line_locked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='order_line']/tree//field[@name='price_unit']"
+                       position="attributes">
+                    <attribute name="readonly">is_line_locked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='order_line']/tree//field[@name='discount']"
+                       position="attributes">
+                    <attribute name="readonly">is_line_locked</attribute>
+                </xpath>
+
             </field>
         </record>
     </data>

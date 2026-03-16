@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Set the default home action to Sales Quotations for all internal users.
+        Uses the standard sale module window action so Odoo resolves it correctly.
+    -->
+
+    <!-- Apply to the base internal user template so every new user inherits it -->
+    <record id="base.default_user" model="res.users">
+        <field name="action_id" ref="sale.action_quotations_with_onboarding"/>
+    </record>
+
+    <!-- Also apply to the admin user directly -->
+    <record id="base.user_admin" model="res.users">
+        <field name="action_id" ref="sale.action_quotations_with_onboarding"/>
+    </record>
+</odoo>

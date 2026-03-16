@@ -1,4 +1,5 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 
 class SaleOrder(models.Model):
@@ -22,3 +23,84 @@ class SaleOrder(models.Model):
                 order.billing_actions_visible = not all_paid
             else:
                 order.billing_actions_visible = True
+
+    def _get_selected_lines(self, action=None):
+        """
+        Return selected product lines that are eligible for *action*.
+
+        Rows excluded for every action
+        ────────────────────────────────
+        • section / note rows (display_type set)
+        • down-payment lines  (is_downpayment)
+        • lines locked by a *paid* down-payment  (is_line_locked)
+
+        Additional per-action exclusions
+        ──────────────────────────────────
+        waive  — skip lines already at 100 % discount
+        claim  — skip lines already submitted or approved
+        pay    — skip lines that already have any linked down payment
+                 (paid OR in-progress)
+        """
+        self.ensure_one()
+        lines = self.order_line.filtered(
+            lambda l: l.selected and not l.display_type and not l.is_downpayment
+        )
+        if not lines:
+            raise UserError(_(
+                "No lines selected. Check the ✓ column on the lines you want to act on."
+            ))
+
+        # Always exclude lines locked by a paid down payment.
+        lines = lines.filtered(lambda l: not l.is_line_locked)
+
+        if action == 'waive':
+            lines = lines.filtered(lambda l: l.discount != 100.0)
+            if not lines:
+                raise UserError(_(
+                    "All selected lines are already waived or covered by a paid "
+                    "down payment — nothing to waive."
+                ))
+
+        elif action == 'claim':
+            lines = lines.filtered(
+                lambda l: l.claim_status not in ('submitted', 'approved')
+            )
+            if not lines:
+                raise UserError(_(
+                    "All selected lines already have a claim submitted / approved, "
+                    "or are covered by a paid down payment."
+                ))
+
+        elif action == 'pay':
+            # Exclude lines that already have any DP linked (paid or pending).
+            lines = lines.filtered(lambda l: not l.downpayment_line_id)
+            if not lines:
+                raise UserError(_(
+                    "All selected lines already have a down payment linked, "
+                    "or are covered by a paid down payment."
+                ))
+
+        else:
+            if not lines:
+                raise UserError(_(
+                    "No eligible lines to process after excluding locked items."
+                ))
+
+        return lines
+
+    def action_waive_selected(self):
+        self.ensure_one()
+        lines = self._get_selected_lines(action='waive')
+        lines.action_bulk_waive()
+        lines.write({'selected': False})
+
+    def action_claim_selected(self):
+        self.ensure_one()
+        lines = self._get_selected_lines(action='claim')
+        lines.action_bulk_fhir_claim()
+        lines.write({'selected': False})
+
+    def action_pay_selected(self):
+        self.ensure_one()
+        lines = self._get_selected_lines(action='pay')
+        return lines.action_bulk_individual_payment()
