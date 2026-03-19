@@ -101,6 +101,8 @@
                   <fileset dir="${project.basedir}/../distro">
                     <include name="config/odoo/**" />
                     <include name="binaries/odoo/**" />
+                    <!-- AMPATH custom EIP extension JARs (alongside upstream eip-odoo-openmrs JAR) -->
+                    <include name="binaries/eip-odoo-openmrs/**" />
                     <include name="data/**" />
                   </fileset>
                 </copy>

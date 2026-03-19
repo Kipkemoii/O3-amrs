@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.openmrs</groupId>
+    <artifactId>distro-emr</artifactId>
+    <version>3.6.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <groupId>com.ampath</groupId>
+  <artifactId>eip-odoo-ampath</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>AMPATH EIP Odoo Extensions</name>
+  <description>
+    Custom Camel routes that extend eip-odoo-openmrs to support generic/procedure
+    order types and graceful 404 handling for ServiceRequest FHIR lookups.
+  </description>
+
+  <properties>
+    <eip.odoo.openmrs.version>2.2.0</eip.odoo.openmrs.version>
+    <!-- Keep in sync with what eip-odoo-openmrs ships -->
+    <camel.version>3.21.0</camel.version>
+    <spring.boot.version>2.7.18</spring.boot.version>
+    <hapi.fhir.version>6.8.3</hapi.fhir.version>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <!-- Core EIP Odoo–OpenMRS library (already in eip-client classpath at runtime) -->
+    <dependency>
+      <groupId>com.ozonehis</groupId>
+      <artifactId>eip-odoo-openmrs</artifactId>
+      <version>${eip.odoo.openmrs.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Camel Spring Boot (provided by eip-client fat JAR) -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-spring-boot-starter</artifactId>
+      <version>${camel.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-sql</artifactId>
+      <version>${camel.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Spring Boot (provided by eip-client) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+      <version>${spring.boot.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- HAPI FHIR R4 (provided by eip-odoo-openmrs fat JAR) -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+      <version>${hapi.fhir.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Title>${project.name}</Implementation-Title>
+              <Implementation-Version>${project.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <!-- Copy the built JAR into distro/binaries/eip-odoo-openmrs so the
+           Maven build for odoo-docker picks it up alongside the upstream JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>copy-jar-to-distro</id>
+            <phase>package</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target>
+                <copy
+                  file="${project.build.directory}/${project.artifactId}-${project.version}.jar"
+                  todir="${project.basedir}/../distro/binaries/eip-odoo-openmrs"
+                  overwrite="true"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
