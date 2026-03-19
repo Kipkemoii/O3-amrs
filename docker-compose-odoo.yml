@@ -151,11 +151,11 @@ services:
       - EIP_TEST_ORDER_TYPE_UUID=${EIP_TEST_ORDER_TYPE_UUID:-53eb4768-1359-11df-a1f1-0026b9348838}
       - EIP_DRUG_ORDER_TYPE_UUID=${EIP_DRUG_ORDER_TYPE_UUID:-53eb466e-1359-11df-a1f1-0026b9348838}
       - EIP_SUPPLYREQUEST_ORDER_TYPE_UUID=${EIP_SUPPLYREQUEST_ORDER_TYPE_UUID:-58ea528c-8f62-45f0-86a2-f7d1327b8c56}
-      # Use upstream imaging/procedure routes by setting AMPATH UUIDs directly.
-      - EIP_IMAGING_ORDER_TYPE_UUID=${EIP_IMAGING_ORDER_TYPE_UUID:-ff4485a4-f071-4423-aeb2-db6efce52b83}
-      - EIP_PROCEDURE_ORDER_TYPE_UUID=${EIP_PROCEDURE_ORDER_TYPE_UUID:-2315ab24-9a4e-4b36-b189-8e74d2c77394}
-      # Keep custom generic route disabled.
-      - EIP_GENERIC_ORDER_TYPE_UUIDS=${EIP_GENERIC_ORDER_TYPE_UUIDS:-}
+      # Disable upstream imaging/procedure ServiceRequest reads; handled by GenericOrderRouting.
+      - EIP_IMAGING_ORDER_TYPE_UUID=${EIP_IMAGING_ORDER_TYPE_UUID:-}
+      - EIP_PROCEDURE_ORDER_TYPE_UUID=${EIP_PROCEDURE_ORDER_TYPE_UUID:-}
+      # Custom generic route handles Radiology + Procedure order types.
+      - EIP_GENERIC_ORDER_TYPE_UUIDS=${EIP_GENERIC_ORDER_TYPE_UUIDS:-ff4485a4-f071-4423-aeb2-db6efce52b83,2315ab24-9a4e-4b36-b189-8e74d2c77394}
       - EIP_ODOO_FHIR_SERVER_URL=${EIP_ODOO_FHIR_SERVER_URL:-http://fhir-odoo:8080}
       - EIP_ODOO_FHIR_USERNAME=${ODOO_USER:-admin}
       - EIP_ODOO_FHIR_PASSWORD=${ODOO_PASSWORD:-admin}
@@ -164,7 +164,7 @@ services:
       - WEIGHT_CONCEPT_UUID=${WEIGHT_CONCEPT_UUID:-a8a660ca-1350-11df-a1f1-0026b9348838}
       - HEIGHT_CONCEPT_UUID=${HEIGHT_CONCEPT_UUID:-a8a6619c-1350-11df-a1f1-0026b9348838}
       - EIP_WATCHED_TABLES=${EIP_WATCHED_TABLES:-patient,person_name,person_address,patient_identifier,orders,test_order,drug_order}
-      - DB_EVENT_DESTINATIONS_ODOO=${DB_EVENT_DESTINATIONS_ODOO:-direct:odoo-event-listener}
+      - DB_EVENT_DESTINATIONS_ODOO=${DB_EVENT_DESTINATIONS_ODOO:-direct:odoo-event-listener,direct:ampath-generic-order-listener}
       - CREATE_CUSTOMER_IF_NOT_EXIST=${CREATE_CUSTOMER_IF_NOT_EXIST:-false}
       - ODOO_CUSTOMER_EXTERNAL_ID=${ODOO_CUSTOMER_EXTERNAL_ID:-comment}
       - ODOO_CUSTOMER_DOB_FIELD=${ODOO_CUSTOMER_DOB_FIELD:-}
