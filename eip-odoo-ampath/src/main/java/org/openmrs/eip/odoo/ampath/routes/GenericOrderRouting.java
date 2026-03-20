@@ -3,6 +3,7 @@ package org.openmrs.eip.odoo.ampath.routes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.model.InterceptSendToEndpointDefinition;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -89,21 +90,6 @@ public class GenericOrderRouting extends RouteBuilder {
 
         log.info("GenericOrderRouting enabled for order-type UUIDs: {}", uuidSet);
 
-        // ── Handle upstream FHIR ServiceRequest 404 ─────────────────────────────
-        // Upstream camel-openmrs-fhir tries to read `ServiceRequest/{orderUuid}`.
-        // For radiology/procedure-style generic orders, that resource does not
-        // exist in FHIR, resulting in HTTP 404 "resourceClass=ServiceRequest ... is not known".
-        //
-        // Instead of letting the event fail, we divert the same exchange into
-        // our generic handler which creates a synthetic ServiceRequest bundle
-        // locally and sends it to the Odoo processor.
-        onException(Exception.class)
-                .onWhen(exceptionMessage().contains("Resource of type ServiceRequest"))
-                .handled(true)
-                .log(LoggingLevel.WARN,
-                        "GenericOrderRouting: FHIR ServiceRequest ${exchangeProperty.event.identifier} not known (404) — diverting to generic order handler.")
-                .to("direct:ampath-generic-order-listener");
-
         // Compute OpenMRS REST base URL from the OpenMRS FHIR base URL.
         // Example: http://backend:8080/openmrs/ws/fhir2/R4 -> http://backend:8080/openmrs
         final String openmrsRestBaseUrl = fhirServerUrl.replaceAll("/ws/fhir2/[^/]+$", "");
@@ -111,6 +97,65 @@ public class GenericOrderRouting extends RouteBuilder {
 
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
+
+        // ── Intercept upstream FHIR ServiceRequest reads ──────────────────────
+        // Upstream camel-openmrs-fhir sends `orders` changes to `direct:fhir-handler-servicerequest`.
+        // If the OpenMRS order has an order_type.uuid in `EIP_GENERIC_ORDER_TYPE_UUIDS`,
+        // we skip the upstream endpoint (prevents FHIR ServiceRequest/{orderUuid} 404)
+        // and handle the order in our synthetic ServiceRequest pipeline instead.
+        InterceptSendToEndpointDefinition intercept = interceptSendToEndpoint("direct:fhir-handler-servicerequest");
+        // Camel expects a property key here; we set that boolean property in the intercept flow.
+        intercept.setSkipSendToOriginalEndpoint("ampath.should_handle");
+
+        intercept.process(exchange -> {
+                    exchange.setProperty("ampath.original_body", exchange.getMessage().getBody());
+                    exchange.setProperty("ampath.should_handle", false);
+                })
+                .choice()
+                    .when(simple("${exchangeProperty.event.tableName} == 'orders'"))
+                        // Fetch OpenMRS order JSON so we can inspect order_type.uuid
+                        .toD(openmrsOrderEndpoint + "/${exchangeProperty.event.identifier}")
+                        .process(exchange -> {
+                            String body = exchange.getMessage().getBody(String.class);
+                            exchange.setProperty("ampath.order_json", body);
+
+                            boolean shouldHandle = false;
+                            try {
+                                if (StringUtils.hasText(body)) {
+                                    Map<String, Object> order = objectMapper.readValue(body, mapType);
+                                    Object orderTypeObj = order.getOrDefault("orderType", order.get("order_type"));
+                                    String orderTypeUuid = null;
+                                    if (orderTypeObj instanceof Map) {
+                                        @SuppressWarnings("unchecked")
+                                        Map<String, Object> otMap = (Map<String, Object>) orderTypeObj;
+                                        Object uuid = otMap.get("uuid");
+                                        if (uuid instanceof String) {
+                                            orderTypeUuid = (String) uuid;
+                                        }
+                                    } else if (orderTypeObj instanceof String) {
+                                        orderTypeUuid = (String) orderTypeObj;
+                                    }
+                                    shouldHandle = orderTypeUuid != null && uuidSet.contains(orderTypeUuid);
+                                }
+                            } catch (Exception e) {
+                                shouldHandle = false;
+                            }
+
+                            exchange.setProperty("ampath.should_handle", shouldHandle);
+                        })
+                        .choice()
+                            .when(simple("${exchangeProperty.ampath.should_handle} == true"))
+                                .setBody(exchangeProperty("ampath.order_json"))
+                                .to("direct:ampath-generic-order-listener")
+                            .otherwise()
+                                // Restore original payload so upstream can proceed normally.
+                                .process(exchange -> exchange.getMessage().setBody(
+                                        exchange.getProperty("ampath.original_body")))
+                        .endChoice()
+                    .otherwise()
+                        .process(exchange -> exchange.getMessage().setBody(
+                                exchange.getProperty("ampath.original_body")))
+                .end();
 
         // ── Main route ────────────────────────────────────────────────────────────
         from("direct:ampath-generic-order-listener")
