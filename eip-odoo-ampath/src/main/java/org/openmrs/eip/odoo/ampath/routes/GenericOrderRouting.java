@@ -77,7 +77,7 @@ public class GenericOrderRouting extends RouteBuilder {
             return;
         }
 
-        Set<String> uuidSet = Arrays.stream(genericOrderTypeUuids.split(","))
+        final Set<String> uuidSet = Arrays.stream(genericOrderTypeUuids.split(","))
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toSet());
@@ -89,14 +89,20 @@ public class GenericOrderRouting extends RouteBuilder {
 
         log.info("GenericOrderRouting enabled for order-type UUIDs: {}", uuidSet);
 
-        // ── Handle 404 from FHIR gracefully ──────────────────────────────────────
-        // If the ServiceRequest has been deleted/voided on the FHIR side before this
-        // route reads it, treat it as a delete event rather than crashing.
+        // ── Handle upstream FHIR ServiceRequest 404 ─────────────────────────────
+        // Upstream camel-openmrs-fhir tries to read `ServiceRequest/{orderUuid}`.
+        // For radiology/procedure-style generic orders, that resource does not
+        // exist in FHIR, resulting in HTTP 404 "resourceClass=ServiceRequest ... is not known".
+        //
+        // Instead of letting the event fail, we divert the same exchange into
+        // our generic handler which creates a synthetic ServiceRequest bundle
+        // locally and sends it to the Odoo processor.
         onException(Exception.class)
-                .onWhen(exceptionMessage().contains("404"))
+                .onWhen(exceptionMessage().contains("Resource of type ServiceRequest"))
                 .handled(true)
                 .log(LoggingLevel.WARN,
-                        "GenericOrderRouting: ServiceRequest ${exchangeProperty.event.identifier} not found in FHIR (404) — skipping.");
+                        "GenericOrderRouting: FHIR ServiceRequest ${exchangeProperty.event.identifier} not known (404) — diverting to generic order handler.")
+                .to("direct:ampath-generic-order-listener");
 
         // Compute OpenMRS REST base URL from the OpenMRS FHIR base URL.
         // Example: http://backend:8080/openmrs/ws/fhir2/R4 -> http://backend:8080/openmrs
@@ -113,8 +119,14 @@ public class GenericOrderRouting extends RouteBuilder {
                 // Only process `orders` table events
                 .filter(simple("${exchangeProperty.event.tableName} == 'orders'"))
 
-                // Fetch the OpenMRS order via REST (no SQL)
-                .toD(openmrsOrderEndpoint + "/${exchangeProperty.event.identifier}")
+                // Fetch the OpenMRS order via REST (no SQL), unless the intercept
+                // already fetched it and stored it in `ampath.order_json`.
+                .choice()
+                    .when(exchangeProperty("ampath.order_json").isNotNull())
+                        .setBody(exchangeProperty("ampath.order_json"))
+                    .otherwise()
+                        .toD(openmrsOrderEndpoint + "/${exchangeProperty.event.identifier}")
+                .end()
                 .process(exchange -> {
                     String body = exchange.getMessage().getBody(String.class);
                     if (!StringUtils.hasText(body)) {
@@ -139,6 +151,8 @@ public class GenericOrderRouting extends RouteBuilder {
                     }
 
                     exchange.setProperty("generic.order_type_uuid", orderTypeUuid);
+                    exchange.setProperty("generic.order_type_match",
+                            orderTypeUuid != null && uuidSet.contains(orderTypeUuid));
 
                     // voided: boolean, or 0/1
                     Object voidedObj = order.getOrDefault("voided", order.get("isVoided"));
@@ -258,10 +272,13 @@ public class GenericOrderRouting extends RouteBuilder {
                     exchange.setProperty("generic.completed", completed);
                 })
 
+                .log(LoggingLevel.INFO,
+                        "GenericOrderRouting: order_type_uuid=${exchangeProperty.generic.order_type_uuid} match=${exchangeProperty.generic.order_type_match}")
+
                 // Skip if the order_type UUID is not in our configured set
                 .filter(exchange -> {
-                    String uuid = exchange.getProperty("generic.order_type_uuid", String.class);
-                    return uuid != null && uuidSet.contains(uuid);
+                    Boolean match = exchange.getProperty("generic.order_type_match", Boolean.class);
+                    return Boolean.TRUE.equals(match);
                 })
 
                 // Skip if we couldn't map required fields to a ServiceRequest
