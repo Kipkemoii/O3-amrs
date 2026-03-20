@@ -133,6 +133,9 @@ services:
       - ODOO_URL=http://odoo:8069
       - OPENMRS_URL=${OPENMRS_URL:-http://backend:8080/openmrs}
       - EIP_PROFILE=${EIP_PROFILE:-prod}
+      # Pick up beans under org.openmrs.eip.* (AMPATH routes JAR) alongside Ozone defaults.
+      # Property in eip-client: eip.app.scan.packages — see https://github.com/ozone-his/eip-client
+      - EIP_APP_SCAN_PACKAGES=${EIP_APP_SCAN_PACKAGES:-com.ozonehis,org.openmrs.eip}
       - MYSQL_ADMIN_USER=${OPENMRS_DB_HOST}
       - MYSQL_ADMIN_USER=${OPENMRS_DB_USER}
       - MYSQL_ADMIN_USER_PASSWORD=${OPENMRS_DB_PASSWORD}
