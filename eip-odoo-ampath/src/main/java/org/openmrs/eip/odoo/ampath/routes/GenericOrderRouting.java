@@ -103,9 +103,15 @@ public class GenericOrderRouting extends RouteBuilder {
         // If the OpenMRS order has an order_type.uuid in `EIP_GENERIC_ORDER_TYPE_UUIDS`,
         // we skip the upstream endpoint (prevents FHIR ServiceRequest/{orderUuid} 404)
         // and handle the order in our synthetic ServiceRequest pipeline instead.
-        InterceptSendToEndpointDefinition intercept = interceptSendToEndpoint("direct:fhir-handler-servicerequest");
-        // Camel expects a property key here; we set that boolean property in the intercept flow.
-        intercept.setSkipSendToOriginalEndpoint("ampath.should_handle");
+        InterceptSendToEndpointDefinition intercept =
+                interceptSendToEndpoint("direct:fhir-handler-servicerequest");
+
+        // When the interceptor is active we always skip the original endpoint.
+        // For non-matching orders we call the original endpoint ourselves,
+        // but with `ampath.bypass=true` so the interceptor won't re-apply.
+        intercept
+                .when(simple("${exchangeProperty.ampath.bypass} != true"))
+                .skipSendToOriginalEndpoint();
 
         intercept.process(exchange -> {
                     exchange.setProperty("ampath.original_body", exchange.getMessage().getBody());
@@ -148,13 +154,18 @@ public class GenericOrderRouting extends RouteBuilder {
                                 .setBody(exchangeProperty("ampath.order_json"))
                                 .to("direct:ampath-generic-order-listener")
                             .otherwise()
-                                // Restore original payload so upstream can proceed normally.
-                                .process(exchange -> exchange.getMessage().setBody(
-                                        exchange.getProperty("ampath.original_body")))
+                                .process(exchange -> {
+                                    exchange.getMessage().setBody(exchange.getProperty("ampath.original_body"));
+                                    exchange.setProperty("ampath.bypass", true);
+                                })
+                                .to("direct:fhir-handler-servicerequest")
                         .endChoice()
                     .otherwise()
-                        .process(exchange -> exchange.getMessage().setBody(
-                                exchange.getProperty("ampath.original_body")))
+                        .process(exchange -> {
+                            exchange.getMessage().setBody(exchange.getProperty("ampath.original_body"));
+                            exchange.setProperty("ampath.bypass", true);
+                        })
+                        .to("direct:fhir-handler-servicerequest")
                 .end();
 
         // ── Main route ────────────────────────────────────────────────────────────
