@@ -76,8 +76,8 @@ public class GenericOrderRouting extends RouteBuilder {
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
 
-        // ── Main route: consumes direct:fhir-servicerequest from watcher ─────────
-        from("direct:fhir-servicerequest")
+        // ── Main route: consumes direct:fhir-handler-servicerequest from watcher ─────────
+        from("direct:fhir-handler-servicerequest")
                 .routeId("ampath-generic-order-router")
                 .filter(body().isNotNull())
 
