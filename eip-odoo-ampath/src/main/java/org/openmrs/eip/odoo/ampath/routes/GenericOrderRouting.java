@@ -5,14 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -43,7 +42,8 @@ import org.hl7.fhir.r4.model.ServiceRequest;
  * <h3>Event flow</h3>
  * <pre>
  * DB_EVENT_DESTINATIONS_ODOO=direct:odoo-event-listener (only — do not also add ampath direct)
- * FHIR ServiceRequest 404 on orders → ServiceRequestFhir404RouteConfiguration → this route
+ * FHIR ServiceRequest 404 on orders → route-configuration onException and/or
+ * ServiceRequestFhir404FailureNotifier → this route
  *   ↓
  * Filter: table == 'orders'
  *   ↓
@@ -59,12 +59,8 @@ import org.hl7.fhir.r4.model.ServiceRequest;
 @Component
 public class GenericOrderRouting extends RouteBuilder {
 
-    /**
-     * Comma-separated list of OpenMRS order-type UUIDs that should be treated as
-     * generic service requests and synced to Odoo.  Leave empty to disable this route.
-     */
-    @Value("${eip.generic.order.type.uuids:}")
-    private String genericOrderTypeUuids;
+    @Autowired
+    private AmpathGenericOrderProperties genericOrderProperties;
 
     /**
      * Base URL of the OpenMRS FHIR R4 server (same as EIP_FHIR_SERVER_URL).
@@ -74,20 +70,12 @@ public class GenericOrderRouting extends RouteBuilder {
 
     @Override
     public void configure() {
-        if (!StringUtils.hasText(genericOrderTypeUuids)) {
-            log.info("EIP_GENERIC_ORDER_TYPE_UUIDS is not set — GenericOrderRouting is disabled.");
+        if (!genericOrderProperties.isGenericOrderHandlingEnabled()) {
+            log.info("EIP_GENERIC_ORDER_TYPE_UUIDS / eip.generic.order.type.uuids is not set — GenericOrderRouting is disabled.");
             return;
         }
 
-        final Set<String> uuidSet = Arrays.stream(genericOrderTypeUuids.split(","))
-                .map(String::trim)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toSet());
-
-        if (uuidSet.isEmpty()) {
-            log.info("EIP_GENERIC_ORDER_TYPE_UUIDS parsed to empty set — GenericOrderRouting is disabled.");
-            return;
-        }
+        final Set<String> uuidSet = genericOrderProperties.getGenericOrderTypeUuids();
 
         log.info("GenericOrderRouting enabled for order-type UUIDs: {}", uuidSet);
 
