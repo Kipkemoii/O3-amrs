@@ -15,10 +15,12 @@
   <artifactId>eip-odoo-ampath</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>AMPATH EIP Odoo Extensions</name>
+  <name>AMPATH EIP Odoo – Standalone Client</name>
   <description>
-    Custom Camel routes that extend eip-odoo-openmrs to support generic/procedure
-    order types and graceful 404 handling for ServiceRequest FHIR lookups.
+    Standalone EIP Camel routes for processing radiology and procedure orders.
+    Fetches order data via OpenMRS REST API (bypassing FHIR 2) and sends to Odoo.
+    Produces a fat JAR that bundles eip-odoo-openmrs handlers/processors (but not
+    its routes) so the Docker image only needs this single JAR.
   </description>
 
   <properties>
@@ -32,12 +34,15 @@
   </properties>
 
   <dependencies>
-    <!-- Core EIP Odoo–OpenMRS library (already in eip-client classpath at runtime) -->
+    <!--
+      Core EIP Odoo–OpenMRS library: compile scope so Shade bundles its handlers,
+      processors, models, and client classes into this JAR.
+    -->
     <dependency>
       <groupId>com.ozonehis</groupId>
       <artifactId>eip-odoo-openmrs</artifactId>
       <version>${eip.odoo.openmrs.version}</version>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
 
     <!-- Camel Spring Boot (provided by eip-client fat JAR) -->
@@ -73,18 +78,55 @@
 
   <build>
     <plugins>
+      <!-- Shade: create fat JAR with eip-odoo-openmrs classes bundled.
+           Excludes the stock route classes to avoid duplicate Camel consumers. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.3.0</version>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Implementation-Title>${project.name}</Implementation-Title>
-              <Implementation-Version>${project.version}</Implementation-Version>
-            </manifestEntries>
-          </archive>
-        </configuration>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <artifactSet>
+                <includes>
+                  <include>com.ozonehis:eip-odoo-openmrs</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>com.ozonehis:eip-odoo-openmrs</artifact>
+                  <excludes>
+                    <!-- Exclude stock route classes to avoid duplicate consumers -->
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Implementation-Title>${project.name}</Implementation-Title>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                  </manifestEntries>
+                </transformer>
+                <!-- Merge Spring component scan files -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring.handlers</resource>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring.schemas</resource>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

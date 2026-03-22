@@ -105,10 +105,11 @@
                     <include name="data/**" />
                   </fileset>
                 </copy>
-                <!-- Sibling module JAR (not published to Maven Central; requires reactor: eip-odoo-ampath before odoo-docker) -->
+                <!-- AMPATH fat JAR into its own image directory (not mixed with stock eip-odoo-openmrs) -->
+                <mkdir dir="${odoo.build}/binaries/eip-odoo-ampath-image" />
                 <copy
                   file="${project.basedir}/../eip-odoo-ampath/target/eip-odoo-ampath-${eip.odoo.ampath.version}.jar"
-                  todir="${odoo.build}/binaries/eip-odoo-openmrs"
+                  todir="${odoo.build}/binaries/eip-odoo-ampath-image"
                   overwrite="true"
                   failonerror="true" />
               </target>
@@ -159,6 +160,7 @@
                     <include>postgresql/Dockerfile</include>
                     <include>odoo/Dockerfile</include>
                     <include>eip-odoo-openmrs/Dockerfile</include>
+                    <include>eip-odoo-ampath-image/Dockerfile</include>
                   </includes>
                   <targetPath>.</targetPath>
                 </resource>
@@ -244,6 +246,28 @@
                 <argument>${eip.odoo.openmrs.image}:${project.version}</argument>
                 <argument>-t</argument>
                 <argument>${eip.odoo.openmrs.image}:latest</argument>
+                <argument>.</argument>
+              </arguments>
+              <workingDirectory>${project.build.directory}/odoo-build</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>docker-build-eip-odoo-ampath</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${skip.docker.build}</skip>
+              <executable>docker</executable>
+              <arguments>
+                <argument>build</argument>
+                <argument>-f</argument>
+                <argument>eip-odoo-ampath-image/Dockerfile</argument>
+                <argument>-t</argument>
+                <argument>ghcr.io/ampath/o3-amrs-eip-odoo-ampath:${project.version}</argument>
+                <argument>-t</argument>
+                <argument>ghcr.io/ampath/o3-amrs-eip-odoo-ampath:latest</argument>
                 <argument>.</argument>
               </arguments>
               <workingDirectory>${project.build.directory}/odoo-build</workingDirectory>

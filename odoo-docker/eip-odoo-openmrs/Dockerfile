@@ -1,6 +1,7 @@
 FROM mekomsolutions/eip-client
 
-# EIP Odoo–OpenMRS client image with bundled Camel routes.
-# Build context must include: binaries/eip-odoo-openmrs (from ozone-distro).
-ADD binaries/eip-odoo-openmrs /eip-client/routes
+# Stock EIP Odoo–OpenMRS client image with bundled Camel routes.
+# Only the stock JAR — AMPATH routes run in a separate container.
+COPY binaries/eip-odoo-openmrs/eip-odoo-openmrs-*.jar /eip-client/routes/
+
 

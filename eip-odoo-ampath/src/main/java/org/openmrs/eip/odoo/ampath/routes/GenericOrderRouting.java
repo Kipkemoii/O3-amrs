@@ -19,40 +19,30 @@ import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.ServiceRequest;
 
 /**
- * Routes generic/procedure order events from the OpenMRS Debezium stream into
- * the existing Odoo ServiceRequest processing pipeline.
+ * Standalone route that consumes {@code direct:fhir-servicerequest} and processes
+ * radiology/procedure order events from the OpenMRS Debezium stream.
  *
  * <h3>Why this exists</h3>
- * The upstream {@code ServiceRequestRouter} only recognises two hardcoded order-type
- * UUIDs (lab test + imaging).  Any other order type is silently filtered out, so
- * procedures, clinical notes, and other "generic" orders never reach Odoo.
+ * The OpenMRS FHIR 2 module does not map radiology/procedure order types to
+ * {@code ServiceRequest} resources.  Instead of attempting FHIR reads (which always
+ * return 404), this route fetches order data directly via the OpenMRS REST Orders API,
+ * builds a synthetic FHIR {@link Bundle}, and sends it to the existing
+ * {@code ServiceRequestProcessor} pipeline for Odoo sale order creation.
  *
- * <h3>EIP client classpath scan</h3>
- * This class lives under {@code org.openmrs.eip.*} so the Ozone EIP client picks it up
- * when {@code eip.app.scan.packages} includes {@code org.openmrs.eip} (see
- * <a href="https://github.com/ozone-his/eip-client">ozone-his/eip-client</a>).
+ * <h3>Flow</h3>
+ * <pre>
+ * Debezium watcher (orders table)
+ *   → direct:fhir-servicerequest (body = ServiceRequest with order UUID as ID)
+ *   → Extract order UUID from ServiceRequest ID
+ *   → REST: fetch order via OpenMRS REST API
+ *   → Filter: order_type UUID in EIP_GENERIC_ORDER_TYPE_UUIDS
+ *   → Build synthetic ServiceRequest bundle
+ *   → direct:service-request-to-sale-order-processor → ServiceRequestProcessor (Odoo)
+ * </pre>
  *
  * <h3>Configuration</h3>
  * <pre>
- * # Comma-separated list of OpenMRS order-type UUIDs to treat as generic orders.
- * # Events for these types are forwarded to the ServiceRequest Odoo processor.
  * EIP_GENERIC_ORDER_TYPE_UUIDS=uuid1,uuid2,...
- * </pre>
- *
- * <h3>Event flow</h3>
- * <pre>
- * DB_EVENT_DESTINATIONS_ODOO=direct:odoo-event-listener (only — do not also add ampath direct)
- * FHIR ServiceRequest 404 on orders → {@link ServiceRequestFhir404FailureNotifier} → this route
- *   ↓
- * Filter: table == 'orders'
- *   ↓
- * REST: fetch order via OpenMRS REST
- *   ↓
- * Filter: order_type UUID in EIP_GENERIC_ORDER_TYPE_UUIDS
- *   ↓
- * Build ServiceRequest bundle locally (no ServiceRequest FHIR reads)
- *   ↓
- * direct:service-request-to-sale-order-processor  → ServiceRequestProcessor (Odoo)
  * </pre>
  */
 @Component
@@ -86,33 +76,48 @@ public class GenericOrderRouting extends RouteBuilder {
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
 
-        // ── Main route (also reached via ServiceRequestFhir404FailureNotifier) ─
-        from("direct:ampath-generic-order-listener")
+        // ── Main route: consumes direct:fhir-servicerequest from watcher ─────────
+        from("direct:fhir-servicerequest")
                 .routeId("ampath-generic-order-router")
+                .filter(body().isNotNull())
 
-                // Only process `orders` table events
-                .filter(simple("${exchangeProperty.event.tableName} == 'orders'"))
+                // Extract the order UUID from the ServiceRequest body (set by watcher)
+                .process(exchange -> {
+                    Object body = exchange.getMessage().getBody();
+                    String orderUuid = null;
+                    if (body instanceof ServiceRequest) {
+                        ServiceRequest sr = (ServiceRequest) body;
+                        orderUuid = sr.getIdElement().getIdPart();
+                    } else if (body instanceof String) {
+                        orderUuid = (String) body;
+                    }
+                    if (orderUuid == null || orderUuid.isBlank()) {
+                        orderUuid = exchange.getProperty("event.identifier", String.class);
+                    }
+                    exchange.setProperty("ampath.order_uuid", orderUuid);
+                })
 
-                // Fetch the OpenMRS order via REST (no SQL), unless the intercept
-                // already fetched it and stored it in `ampath.order_json`.
-                .choice()
-                    .when(exchangeProperty("ampath.order_json").isNotNull())
-                        .setBody(exchangeProperty("ampath.order_json"))
-                    .otherwise()
-                        .setHeader(Exchange.HTTP_METHOD, constant("GET"))
-                        .setBody(constant(""))
-                        .toD(openmrsOrderEndpoint + "/${exchangeProperty.event.identifier}")
-                .end()
+                .filter(exchangeProperty("ampath.order_uuid").isNotNull())
+
+                .log(LoggingLevel.INFO,
+                        "GenericOrderRouting: fetching order ${exchangeProperty.ampath.order_uuid} via REST")
+
+                // Fetch the order via OpenMRS REST API
+                .setHeader(Exchange.HTTP_METHOD, constant("GET"))
+                .setBody(constant(""))
+                .toD(openmrsOrderEndpoint + "/${exchangeProperty.ampath.order_uuid}")
+
+                // Parse and validate the order JSON
                 .process(exchange -> {
                     String body = exchange.getMessage().getBody(String.class);
                     if (!StringUtils.hasText(body)) {
                         throw new IllegalArgumentException(
-                                "Empty OpenMRS order REST response for uuid " + exchange.getProperty("event.identifier"));
+                                "Empty OpenMRS order REST response for uuid " + exchange.getProperty("ampath.order_uuid"));
                     }
 
                     Map<String, Object> order = objectMapper.readValue(body, mapType);
 
-                    // orderType.uuid (or similarly named fields depending on OpenMRS version)
+                    // ── orderType.uuid ──
                     Object orderTypeObj = order.getOrDefault("orderType", order.get("order_type"));
                     String orderTypeUuid = null;
                     if (orderTypeObj instanceof Map) {
@@ -130,7 +135,7 @@ public class GenericOrderRouting extends RouteBuilder {
                     exchange.setProperty("generic.order_type_match",
                             orderTypeUuid != null && uuidSet.contains(orderTypeUuid));
 
-                    // voided: boolean, or 0/1
+                    // ── voided ──
                     Object voidedObj = order.getOrDefault("voided", order.get("isVoided"));
                     boolean voided = false;
                     if (voidedObj instanceof Boolean) {
@@ -143,14 +148,14 @@ public class GenericOrderRouting extends RouteBuilder {
                     }
                     exchange.setProperty("generic.voided", voided ? 1 : 0);
 
-                    // Action string (DISCONTINUE)
+                    // ── action ──
                     Object actionObj = order.get("orderAction");
                     if (actionObj == null) actionObj = order.get("order_action");
                     if (actionObj == null) actionObj = order.get("action");
                     String orderAction = (actionObj instanceof String) ? (String) actionObj : null;
                     exchange.setProperty("generic.order_action", orderAction);
 
-                    // Concept (drives Product lookup)
+                    // ── concept (drives Product lookup) ──
                     Object conceptObj = order.get("concept");
                     if (conceptObj == null) {
                         conceptObj = order.get("conceptReference");
@@ -174,7 +179,7 @@ public class GenericOrderRouting extends RouteBuilder {
                         conceptUuid = (String) conceptObj;
                     }
 
-                    // Patient / Encounter (drives OpenMRS FHIR reads inside ServiceRequestProcessor)
+                    // ── patient / encounter / orderer ──
                     Object patientObj = order.get("patient");
                     Object encounterObj = order.get("encounter");
                     Object ordererObj = order.get("orderer");
@@ -209,7 +214,7 @@ public class GenericOrderRouting extends RouteBuilder {
                         }
                     }
 
-                    // Completed detection (drives create/update vs delete in ServiceRequestProcessor)
+                    // ── completed detection ──
                     boolean completed = false;
                     Object dateStoppedObj = order.get("dateStopped");
                     if (dateStoppedObj == null) {
@@ -231,6 +236,7 @@ public class GenericOrderRouting extends RouteBuilder {
                         }
                     }
 
+                    // ── validate required fields ──
                     StringBuilder missingFields = new StringBuilder();
                     if (conceptUuid == null) missingFields.append("concept_uuid ");
                     if (patientUuid == null) missingFields.append("patient_uuid ");
@@ -257,19 +263,19 @@ public class GenericOrderRouting extends RouteBuilder {
                     return Boolean.TRUE.equals(match);
                 })
 
-                // Skip if we couldn't map required fields to a ServiceRequest
+                // Skip if we couldn't map required fields
                 .filter(exchange -> {
                     boolean invalid = Boolean.TRUE.equals(exchange.getProperty("generic.invalid", Boolean.class));
                     if (invalid) {
                         String missingFields = exchange.getProperty("generic.missing_fields", String.class);
                         log.warn("GenericOrderRouting: skipping order {} due to missing fields: {}",
-                                exchange.getProperty("event.identifier"), missingFields);
+                                exchange.getProperty("ampath.order_uuid"), missingFields);
                     }
                     return !invalid;
                 })
 
                 .log(LoggingLevel.INFO,
-                        "GenericOrderRouting: processing order ${exchangeProperty.event.identifier}")
+                        "GenericOrderRouting: processing order ${exchangeProperty.ampath.order_uuid}")
 
                 .choice()
                     // ── Delete / void ────────────────────────────────────────────
@@ -278,80 +284,60 @@ public class GenericOrderRouting extends RouteBuilder {
                             + "|| ${exchangeProperty.generic.order_action} == 'DISCONTINUE'"))
                         .setHeader("openmrs.fhir.event", constant("d"))
                         .process(exchange -> {
-                            String serviceRequestId = exchange.getProperty("event.identifier", String.class);
-                            boolean completed = Boolean.TRUE.equals(exchange.getProperty("generic.completed", Boolean.class));
-
-                            String conceptUuid = exchange.getProperty("generic.concept_uuid", String.class);
-                            String conceptDisplay = exchange.getProperty("generic.concept_display", String.class);
-                            String patientUuid = exchange.getProperty("generic.patient_uuid", String.class);
-                            String encounterUuid = exchange.getProperty("generic.encounter_uuid", String.class);
-                            String ordererUuid = exchange.getProperty("generic.orderer_uuid", String.class);
-                            String ordererDisplay = exchange.getProperty("generic.orderer_display", String.class);
-
-                            ServiceRequest serviceRequest = new ServiceRequest();
-                            serviceRequest.setId(serviceRequestId);
-                            serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.ORDER);
-                            serviceRequest.setStatus(
-                                    completed ? ServiceRequest.ServiceRequestStatus.COMPLETED : ServiceRequest.ServiceRequestStatus.ACTIVE);
-
-                            CodeableConcept code = new CodeableConcept();
-                            code.setText(conceptDisplay != null ? conceptDisplay : conceptUuid);
-                            code.addCoding(new Coding().setCode(conceptUuid));
-                            serviceRequest.setCode(code);
-
-                            serviceRequest.setSubject(new Reference("Patient/" + patientUuid));
-                            serviceRequest.setEncounter(new Reference("Encounter/" + encounterUuid));
-
-                            Reference requester = new Reference("Practitioner/" + (ordererUuid != null ? ordererUuid : ""));
-                            requester.setDisplay(ordererDisplay != null ? ordererDisplay : "");
-                            serviceRequest.setRequester(requester);
-
-                            Bundle bundle = new Bundle();
-                            bundle.addEntry().setResource(serviceRequest);
-                            exchange.getMessage().setBody(bundle);
+                            exchange.getMessage().setBody(buildBundle(exchange));
                         })
                         .to("direct:service-request-to-sale-order-processor")
 
-                    // ── Create / update — fetch from FHIR ────────────────────────
+                    // ── Create / update ───────────────────────────────────────────
                     .otherwise()
                         .setHeader("openmrs.fhir.event",
                                 simple("${exchangeProperty.event.operation}"))
                         .process(exchange -> {
-                            String serviceRequestId = exchange.getProperty("event.identifier", String.class);
-                            boolean completed = Boolean.TRUE.equals(exchange.getProperty("generic.completed", Boolean.class));
-
-                            String conceptUuid = exchange.getProperty("generic.concept_uuid", String.class);
-                            String conceptDisplay = exchange.getProperty("generic.concept_display", String.class);
-                            String patientUuid = exchange.getProperty("generic.patient_uuid", String.class);
-                            String encounterUuid = exchange.getProperty("generic.encounter_uuid", String.class);
-                            String ordererUuid = exchange.getProperty("generic.orderer_uuid", String.class);
-                            String ordererDisplay = exchange.getProperty("generic.orderer_display", String.class);
-
-                            ServiceRequest serviceRequest = new ServiceRequest();
-                            serviceRequest.setId(serviceRequestId);
-                            serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.ORDER);
-                            serviceRequest.setStatus(
-                                    completed ? ServiceRequest.ServiceRequestStatus.COMPLETED : ServiceRequest.ServiceRequestStatus.ACTIVE);
-
-                            CodeableConcept code = new CodeableConcept();
-                            code.setText(conceptDisplay != null ? conceptDisplay : conceptUuid);
-                            code.addCoding(new Coding().setCode(conceptUuid));
-                            serviceRequest.setCode(code);
-
-                            serviceRequest.setSubject(new Reference("Patient/" + patientUuid));
-                            serviceRequest.setEncounter(new Reference("Encounter/" + encounterUuid));
-
-                            Reference requester = new Reference("Practitioner/" + (ordererUuid != null ? ordererUuid : ""));
-                            requester.setDisplay(ordererDisplay != null ? ordererDisplay : "");
-                            serviceRequest.setRequester(requester);
-
-                            Bundle bundle = new Bundle();
-                            bundle.addEntry().setResource(serviceRequest);
-                            exchange.getMessage().setBody(bundle);
+                            exchange.getMessage().setBody(buildBundle(exchange));
                         })
                         .to("direct:service-request-to-sale-order-processor")
                 .endChoice()
 
                 .end();
+    }
+
+    /**
+     * Build a synthetic FHIR {@link Bundle} from exchange properties.
+     * The bundle contains a single {@link ServiceRequest} entry with references
+     * to Patient and Encounter so that {@code ServiceRequestProcessor} can
+     * look them up and create/update the Odoo sale order.
+     */
+    private Bundle buildBundle(Exchange exchange) {
+        String serviceRequestId = exchange.getProperty("ampath.order_uuid", String.class);
+        boolean completed = Boolean.TRUE.equals(exchange.getProperty("generic.completed", Boolean.class));
+
+        String conceptUuid = exchange.getProperty("generic.concept_uuid", String.class);
+        String conceptDisplay = exchange.getProperty("generic.concept_display", String.class);
+        String patientUuid = exchange.getProperty("generic.patient_uuid", String.class);
+        String encounterUuid = exchange.getProperty("generic.encounter_uuid", String.class);
+        String ordererUuid = exchange.getProperty("generic.orderer_uuid", String.class);
+        String ordererDisplay = exchange.getProperty("generic.orderer_display", String.class);
+
+        ServiceRequest serviceRequest = new ServiceRequest();
+        serviceRequest.setId(serviceRequestId);
+        serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.ORDER);
+        serviceRequest.setStatus(
+                completed ? ServiceRequest.ServiceRequestStatus.COMPLETED : ServiceRequest.ServiceRequestStatus.ACTIVE);
+
+        CodeableConcept code = new CodeableConcept();
+        code.setText(conceptDisplay != null ? conceptDisplay : conceptUuid);
+        code.addCoding(new Coding().setCode(conceptUuid));
+        serviceRequest.setCode(code);
+
+        serviceRequest.setSubject(new Reference("Patient/" + patientUuid));
+        serviceRequest.setEncounter(new Reference("Encounter/" + encounterUuid));
+
+        Reference requester = new Reference("Practitioner/" + (ordererUuid != null ? ordererUuid : ""));
+        requester.setDisplay(ordererDisplay != null ? ordererDisplay : "");
+        serviceRequest.setRequester(requester);
+
+        Bundle bundle = new Bundle();
+        bundle.addEntry().setResource(serviceRequest);
+        return bundle;
     }
 }
