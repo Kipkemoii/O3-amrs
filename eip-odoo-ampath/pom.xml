@@ -86,28 +86,6 @@
           </archive>
         </configuration>
       </plugin>
-      <!-- Copy the built JAR into distro/binaries/eip-odoo-openmrs so the
-           Maven build for odoo-docker picks it up alongside the upstream JAR -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>copy-jar-to-distro</id>
-            <phase>package</phase>
-            <goals><goal>run</goal></goals>
-            <configuration>
-              <target>
-                <copy
-                  file="${project.build.directory}/${project.artifactId}-${project.version}.jar"
-                  todir="${project.basedir}/../distro/binaries/eip-odoo-openmrs"
-                  overwrite="true"/>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 </project>

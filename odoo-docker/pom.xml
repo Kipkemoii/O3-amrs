@@ -22,6 +22,7 @@
     <odoo.image>ghcr.io/ampath/o3-amrs-odoo</odoo.image>
     <eip.odoo.openmrs.image>ghcr.io/ampath/o3-amrs-eip-odoo-openmrs</eip.odoo.openmrs.image>
     <skip.docker.build>false</skip.docker.build>
+    <eip.odoo.ampath.version>1.0.0-SNAPSHOT</eip.odoo.ampath.version>
   </properties>
 
   <dependencies>
@@ -40,6 +41,13 @@
       <version>${odoo.initializer.version}</version>
       <type>zip</type>
       <scope>provided</scope>
+    </dependency>
+    <!-- AMPATH EIP route JAR → copied into odoo-build/binaries/eip-odoo-openmrs (not under distro/) -->
+    <dependency>
+      <groupId>com.ampath</groupId>
+      <artifactId>eip-odoo-ampath</artifactId>
+      <version>${eip.odoo.ampath.version}</version>
+      <type>jar</type>
     </dependency>
   </dependencies>
 
@@ -101,8 +109,6 @@
                   <fileset dir="${project.basedir}/../distro">
                     <include name="config/odoo/**" />
                     <include name="binaries/odoo/**" />
-                    <!-- AMPATH custom EIP extension JARs (alongside upstream eip-odoo-openmrs JAR) -->
-                    <include name="binaries/eip-odoo-openmrs/**" />
                     <include name="data/**" />
                   </fileset>
                 </copy>
@@ -128,6 +134,25 @@
               <outputDirectory>${project.build.directory}/odoo-build/binaries/odoo/addons</outputDirectory>
               <includeArtifactIds>odoo-initializer</includeArtifactIds>
               <includeScope>provided</includeScope>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-eip-odoo-ampath</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.ampath</groupId>
+                  <artifactId>eip-odoo-ampath</artifactId>
+                  <version>${eip.odoo.ampath.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>${project.build.directory}/odoo-build/binaries/eip-odoo-openmrs</outputDirectory>
+                </artifactItem>
+              </artifactItems>
             </configuration>
           </execution>
         </executions>

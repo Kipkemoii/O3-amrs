@@ -15,6 +15,10 @@
     <fileSet>
       <outputDirectory>..</outputDirectory>
       <directory>${project.build.directory}</directory>
+      <!-- Assembly writes ${finalName}.zip into target; do not archive the archive -->
+      <excludes>
+        <exclude>${project.build.finalName}.zip</exclude>
+      </excludes>
     </fileSet>
   </fileSets>
 </assembly>
