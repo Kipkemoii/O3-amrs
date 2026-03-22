@@ -76,10 +76,16 @@ public class GenericOrderRouting extends RouteBuilder {
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
 
-        // ── Main route: consumes direct:fhir-handler-servicerequest from watcher ─────────
-        from("direct:fhir-handler-servicerequest")
+        // ── Hijack traffic bound for the stock generic fhir-servicerequest-router ──
+        interceptSendToEndpoint("direct:fhir-handler-servicerequest")
+                .skipSendToOriginalEndpoint()
+                .log(LoggingLevel.INFO, ">>> HIJACKED traffic destined for direct:fhir-handler-servicerequest. Diverting to AMPATH client!")
+                .to("direct:ampath-generic-orders");
+
+        // ── Main route: consumes hijacked traffic ─────────
+        from("direct:ampath-generic-orders")
                 .routeId("ampath-generic-order-router")
-                .log(LoggingLevel.INFO, ">>> GenericOrderRouting REACHED! Event received from fhir-router. Body = ${body}")
+                .log(LoggingLevel.INFO, ">>> GenericOrderRouting REACHED! Event received. Body = ${body}")
                 .filter(body().isNotNull())
 
                 // Extract the order UUID from the Debezium Event object via Camel OGNL
