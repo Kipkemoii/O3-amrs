@@ -42,13 +42,6 @@
       <type>zip</type>
       <scope>provided</scope>
     </dependency>
-    <!-- AMPATH EIP route JAR → copied into odoo-build/binaries/eip-odoo-openmrs (not under distro/) -->
-    <dependency>
-      <groupId>com.ampath</groupId>
-      <artifactId>eip-odoo-ampath</artifactId>
-      <version>${eip.odoo.ampath.version}</version>
-      <type>jar</type>
-    </dependency>
   </dependencies>
 
   <build>
@@ -112,6 +105,12 @@
                     <include name="data/**" />
                   </fileset>
                 </copy>
+                <!-- Sibling module JAR (not published to Maven Central; requires reactor: eip-odoo-ampath before odoo-docker) -->
+                <copy
+                  file="${project.basedir}/../eip-odoo-ampath/target/eip-odoo-ampath-${eip.odoo.ampath.version}.jar"
+                  todir="${odoo.build}/binaries/eip-odoo-openmrs"
+                  overwrite="true"
+                  failonerror="true" />
               </target>
             </configuration>
           </execution>
@@ -134,25 +133,6 @@
               <outputDirectory>${project.build.directory}/odoo-build/binaries/odoo/addons</outputDirectory>
               <includeArtifactIds>odoo-initializer</includeArtifactIds>
               <includeScope>provided</includeScope>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-eip-odoo-ampath</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>com.ampath</groupId>
-                  <artifactId>eip-odoo-ampath</artifactId>
-                  <version>${eip.odoo.ampath.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/odoo-build/binaries/eip-odoo-openmrs</outputDirectory>
-                </artifactItem>
-              </artifactItems>
             </configuration>
           </execution>
         </executions>

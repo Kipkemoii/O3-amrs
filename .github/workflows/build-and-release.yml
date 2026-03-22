@@ -111,8 +111,9 @@ jobs:
             ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.BACKEND_IMAGE }}:latest
             ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.BACKEND_IMAGE }}:${{ env.RELEASE_VERSION }}
 
+      # package: eip-odoo-ampath JAR must exist before odoo-docker copies it into odoo-build (not on Maven Central)
       - name: Prepare Odoo Docker build context (Ozone distro + configs)
-        run: mvn -Podoo-docker clean generate-resources
+        run: mvn -Podoo-docker clean package -Dskip.docker.build=true
 
       - name: Build and push Odoo PostgreSQL image
         uses: docker/build-push-action@v6
