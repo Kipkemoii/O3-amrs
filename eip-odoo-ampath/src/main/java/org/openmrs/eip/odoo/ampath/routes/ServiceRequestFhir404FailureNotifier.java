@@ -11,15 +11,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Fallback when {@link ServiceRequestFhir404RouteConfiguration} does not run: upstream
- * {@code fhir-servicerequest-router} often sets an explicit {@code errorHandler}, which
- * prevents Camel route-configuration {@code onException} from applying (see Camel manual:
- * "Routes that have a local error handler defined, will always use this local error
- * handler").
+ * Handles ServiceRequest FHIR read failures for {@code orders} events: upstream
+ * {@code fhir-servicerequest-router} uses a local error handler, so global route-configuration
+ * {@code onException} is unreliable. Camel Simple {@code onWhen} with parentheses also fails to
+ * parse on some versions, so we avoid route-configuration entirely.
  *
- * <p>This notifier reacts to {@link CamelEvent.ExchangeFailedEvent} and forwards a copy of
- * the exchange to {@code direct:ampath-generic-order-listener}. The original failure may
- * still be logged once by the default error handler; Odoo processing can proceed.</p>
+ * <p>Reacts to {@link CamelEvent.ExchangeFailedEvent} and forwards a copy of the exchange to
+ * {@code direct:ampath-generic-order-listener}. The original failure may still be logged once;
+ * Odoo processing can proceed.</p>
  */
 @Component
 public class ServiceRequestFhir404FailureNotifier extends EventNotifierSupport {

@@ -42,8 +42,7 @@ import org.hl7.fhir.r4.model.ServiceRequest;
  * <h3>Event flow</h3>
  * <pre>
  * DB_EVENT_DESTINATIONS_ODOO=direct:odoo-event-listener (only — do not also add ampath direct)
- * FHIR ServiceRequest 404 on orders → route-configuration onException and/or
- * ServiceRequestFhir404FailureNotifier → this route
+ * FHIR ServiceRequest 404 on orders → {@link ServiceRequestFhir404FailureNotifier} → this route
  *   ↓
  * Filter: table == 'orders'
  *   ↓
@@ -87,7 +86,7 @@ public class GenericOrderRouting extends RouteBuilder {
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
 
-        // ── Main route (also reached via ServiceRequestFhir404RouteConfiguration) ─
+        // ── Main route (also reached via ServiceRequestFhir404FailureNotifier) ─
         from("direct:ampath-generic-order-listener")
                 .routeId("ampath-generic-order-router")
 
