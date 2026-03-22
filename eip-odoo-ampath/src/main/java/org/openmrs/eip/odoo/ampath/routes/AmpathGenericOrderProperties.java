@@ -1,48 +1,33 @@
 package org.openmrs.eip.odoo.ampath.routes;
 
-import java.util.Arrays;
+
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
- * Resolves generic order type UUIDs from the {@code EIP_GENERIC_ORDER_TYPE_UUIDS}
- * environment variable via Spring {@code @Value}. Falls back to the standard
- * Radiology + Procedure UUIDs if the variable is not set.
+ * Provides the set of order-type UUIDs that GenericOrderRouting should process.
+ * Hardcoded to the standard Radiology + Procedure UUIDs used at AMPATH.
  */
 @Component
 public class AmpathGenericOrderProperties {
 
-    private static final Logger log = LoggerFactory.getLogger(AmpathGenericOrderProperties.class);
+    private static final String DEFAULT_UUIDS =
+            "ff4485a4-f071-4423-aeb2-db6efce52b83,2315ab24-9a4e-4b36-b189-8e74d2c77394";
 
-    /**
-     * Read the env var directly by name (avoids Spring relaxed-binding issues
-     * with deeply-dotted property names in some container runtimes).
-     * Default = standard Radiology + Procedure UUIDs.
-     */
-    @Value("${EIP_GENERIC_ORDER_TYPE_UUIDS:ff4485a4-f071-4423-aeb2-db6efce52b83,2315ab24-9a4e-4b36-b189-8e74d2c77394}")
-    private String genericOrderTypeUuidsFromSpring;
+    private final Set<String> uuidSet;
 
-    private Set<String> uuidSet = Collections.emptySet();
-
-    @PostConstruct
-    void resolve() {
-        log.info("Raw EIP_GENERIC_ORDER_TYPE_UUIDS value from Spring: '{}'", genericOrderTypeUuidsFromSpring);
-
-        if (StringUtils.hasText(genericOrderTypeUuidsFromSpring)) {
-            uuidSet = Arrays.stream(genericOrderTypeUuidsFromSpring.split(","))
-                    .map(String::trim)
-                    .filter(StringUtils::hasText)
-                    .collect(Collectors.toSet());
+    public AmpathGenericOrderProperties() {
+        Set<String> set = new HashSet<>();
+        for (String uuid : DEFAULT_UUIDS.split(",")) {
+            String trimmed = uuid.trim();
+            if (!trimmed.isEmpty()) {
+                set.add(trimmed);
+            }
         }
-
-        log.info("GenericOrderRouting resolved {} order-type UUIDs: {}", uuidSet.size(), uuidSet);
+        uuidSet = Collections.unmodifiableSet(set);
     }
 
     public boolean isGenericOrderHandlingEnabled() {
@@ -54,6 +39,7 @@ public class AmpathGenericOrderProperties {
     }
 
     public String getEffectiveRawUuids() {
-        return genericOrderTypeUuidsFromSpring;
+        return DEFAULT_UUIDS;
     }
 }
+
