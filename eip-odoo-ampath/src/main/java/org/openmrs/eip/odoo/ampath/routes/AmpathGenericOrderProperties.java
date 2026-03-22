@@ -29,11 +29,13 @@ public class AmpathGenericOrderProperties {
         if (!StringUtils.hasText(raw)) {
             raw = System.getenv("EIP_GENERIC_ORDER_TYPE_UUIDS");
         }
-        effectiveRawUuids = raw;
+        
+        // Final fallback: Use the standard UUIDs for Radiology and Procedure orders
         if (!StringUtils.hasText(raw)) {
-            uuidSet = Collections.emptySet();
-            return;
+            raw = "ff4485a4-f071-4423-aeb2-db6efce52b83,2315ab24-9a4e-4b36-b189-8e74d2c77394"; 
         }
+
+        effectiveRawUuids = raw;
         uuidSet = Arrays.stream(raw.split(","))
                 .map(String::trim)
                 .filter(StringUtils::hasText)
