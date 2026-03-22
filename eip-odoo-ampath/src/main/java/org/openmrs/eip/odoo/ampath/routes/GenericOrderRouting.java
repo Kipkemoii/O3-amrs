@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Exchange;
-import org.apache.camel.model.InterceptSendToEndpointDefinition;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -108,10 +107,14 @@ public class GenericOrderRouting extends RouteBuilder {
         // When that happens, divert the exchange into our generic handler which
         // creates a synthetic ServiceRequest bundle locally.
         onException(Exception.class)
-                .onWhen(exceptionMessage().contains("Resource of type ServiceRequest"))
+                .onWhen(simple(
+                        "${exception.message} contains 'resourceClass=ServiceRequest'"
+                                + " || ${exception.message} contains 'Resource of type ServiceRequest'"
+                                + " || ${exception.message} contains 'HAPI-1357'"
+                                + " || ${exception.message} contains 'HAPI-1361'"))
                 .handled(true)
                 .log(LoggingLevel.WARN,
-                        "GenericOrderRouting: diverting ${exchangeProperty.event.identifier} to generic handler (FHIR ServiceRequest not known)")
+                        "GenericOrderRouting: diverting ${exchangeProperty.event.identifier} to generic handler (FHIR ServiceRequest read failed)")
                 .to("direct:ampath-generic-order-listener");
 
         // ── Main route ────────────────────────────────────────────────────────────
