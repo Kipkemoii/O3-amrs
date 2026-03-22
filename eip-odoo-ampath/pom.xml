@@ -101,8 +101,15 @@
                 <filter>
                   <artifact>com.ozonehis:eip-odoo-openmrs</artifact>
                   <excludes>
-                    <!-- Exclude stock route classes to avoid duplicate consumers -->
-                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/**</exclude>
+                    <!-- Only exclude top-level routing classes that create duplicate consumers.
+                         Keep partner/, saleorder/, saleorderline/ sub-routes which the
+                         ServiceRequestProcessor depends on at runtime. -->
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/PatientRouting.class</exclude>
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/ServiceRequestRouting.class</exclude>
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/MedicationRequestRouting.class</exclude>
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/EncounterRouting.class</exclude>
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/SupplyRequestRouting.class</exclude>
+                    <exclude>com/ozonehis/eip/odoo/openmrs/routes/ProcedureRouting.class</exclude>
                   </excludes>
                 </filter>
               </filters>
