@@ -139,6 +139,7 @@ services:
       - MYSQL_ADMIN_USER=${OPENMRS_DB_HOST}
       - MYSQL_ADMIN_USER=${OPENMRS_DB_USER}
       - MYSQL_ADMIN_USER_PASSWORD=${OPENMRS_DB_PASSWORD}
+      - DEBEZIUM_DB_SERVERID=54320
       - OPENMRS_DB_HOST=${OPENMRS_DB_HOST:-db}
       - OPENMRS_DB_PORT=${OPENMRS_DB_PORT:-3306}
       - OPENMRS_DB_NAME=${OPENMRS_DB_NAME:-amrs}
@@ -214,6 +215,8 @@ services:
       - OPENMRS_PASSWORD=${OPENMRS_PASSWORD:-Admin123}
       - MYSQL_ADMIN_USER=${OPENMRS_DB_USER}
       - MYSQL_ADMIN_USER_PASSWORD=${OPENMRS_DB_PASSWORD}
+      # Required for separate binlog replication (MySQL drops duplicate connection IDs causing snapshot loops)
+      - DEBEZIUM_DB_SERVERID=54321
       # Only watch the orders table — no need for patient/person tables
       - EIP_WATCHED_TABLES=${EIP_AMPATH_WATCHED_TABLES:-orders}
       # Effectively disable product sync by setting the delay to 1 year
