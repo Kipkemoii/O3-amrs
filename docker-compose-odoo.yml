@@ -212,8 +212,13 @@ services:
       - OPENMRS_DB_PASSWORD=${OPENMRS_DB_PASSWORD:-openmrs}
       - OPENMRS_USER=${OPENMRS_USER:-admin}
       - OPENMRS_PASSWORD=${OPENMRS_PASSWORD:-Admin123}
+      - MYSQL_ADMIN_USER=${OPENMRS_DB_USER}
+      - MYSQL_ADMIN_USER_PASSWORD=${OPENMRS_DB_PASSWORD}
       # Only watch the orders table — no need for patient/person tables
       - EIP_WATCHED_TABLES=${EIP_AMPATH_WATCHED_TABLES:-orders}
+      # Effectively disable product sync by setting the delay to 1 year
+      - EIP_PRODUCT_SYNC_INITIAL_DELAY=31536000000
+      - EIP_PRODUCT_SYNC_DELAY=31536000000
       - EIP_FHIR_RESOURCES=${EIP_FHIR_RESOURCES:-Patient,ServiceRequest,MedicationRequest}
       - EIP_FHIR_SERVER_URL=${EIP_FHIR_SERVER_URL:-http://backend:8080/openmrs/ws/fhir2/R4}
       - EIP_FHIR_USERNAME=${OPENMRS_USER:-admin}
