@@ -42,7 +42,8 @@ import org.hl7.fhir.r4.model.ServiceRequest;
  *
  * <h3>Event flow</h3>
  * <pre>
- * DB_EVENT_DESTINATIONS_ODOO must include "direct:ampath-generic-order-listener"
+ * DB_EVENT_DESTINATIONS_ODOO=direct:odoo-event-listener (only — do not also add ampath direct)
+ * FHIR ServiceRequest 404 on orders → ServiceRequestFhir404RouteConfiguration → this route
  *   ↓
  * Filter: table == 'orders'
  *   ↓
@@ -98,26 +99,7 @@ public class GenericOrderRouting extends RouteBuilder {
         final ObjectMapper objectMapper = new ObjectMapper();
         final TypeReference<Map<String, Object>> mapType = new TypeReference<>() {};
 
-        // ── Handle upstream FHIR ServiceRequest 404 ─────────────────────────────
-        // Upstream camel-openmrs-fhir tries to read `ServiceRequest/{orderUuid}`.
-        // For radiology/procedure-style generic orders, that resource does not
-        // exist in FHIR, resulting in HTTP 404 "Resource of type ServiceRequest ...
-        // is not known".
-        //
-        // When that happens, divert the exchange into our generic handler which
-        // creates a synthetic ServiceRequest bundle locally.
-        onException(Exception.class)
-                .onWhen(simple(
-                        "${exception.message} contains 'resourceClass=ServiceRequest'"
-                                + " || ${exception.message} contains 'Resource of type ServiceRequest'"
-                                + " || ${exception.message} contains 'HAPI-1357'"
-                                + " || ${exception.message} contains 'HAPI-1361'"))
-                .handled(true)
-                .log(LoggingLevel.WARN,
-                        "GenericOrderRouting: diverting ${exchangeProperty.event.identifier} to generic handler (FHIR ServiceRequest read failed)")
-                .to("direct:ampath-generic-order-listener");
-
-        // ── Main route ────────────────────────────────────────────────────────────
+        // ── Main route (also reached via ServiceRequestFhir404RouteConfiguration) ─
         from("direct:ampath-generic-order-listener")
                 .routeId("ampath-generic-order-router")
 

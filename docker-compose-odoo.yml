@@ -167,7 +167,8 @@ services:
       - WEIGHT_CONCEPT_UUID=${WEIGHT_CONCEPT_UUID:-a8a660ca-1350-11df-a1f1-0026b9348838}
       - HEIGHT_CONCEPT_UUID=${HEIGHT_CONCEPT_UUID:-a8a6619c-1350-11df-a1f1-0026b9348838}
       - EIP_WATCHED_TABLES=${EIP_WATCHED_TABLES:-patient,person_name,person_address,patient_identifier,orders,test_order,drug_order}
-      - DB_EVENT_DESTINATIONS_ODOO=${DB_EVENT_DESTINATIONS_ODOO:-direct:odoo-event-listener,direct:ampath-generic-order-listener}
+      # Generic orders: ServiceRequestFhir404RouteConfiguration forwards 404s to ampath handler (omit second direct to avoid duplicate processing)
+      - DB_EVENT_DESTINATIONS_ODOO=${DB_EVENT_DESTINATIONS_ODOO:-direct:odoo-event-listener}
       - CREATE_CUSTOMER_IF_NOT_EXIST=${CREATE_CUSTOMER_IF_NOT_EXIST:-false}
       - ODOO_CUSTOMER_EXTERNAL_ID=${ODOO_CUSTOMER_EXTERNAL_ID:-comment}
       - ODOO_CUSTOMER_DOB_FIELD=${ODOO_CUSTOMER_DOB_FIELD:-}
