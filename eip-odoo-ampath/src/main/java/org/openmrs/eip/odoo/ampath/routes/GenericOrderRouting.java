@@ -79,24 +79,18 @@ public class GenericOrderRouting extends RouteBuilder {
         // ── Main route: consumes direct:fhir-handler-servicerequest from watcher ─────────
         from("direct:fhir-handler-servicerequest")
                 .routeId("ampath-generic-order-router")
+                .log(LoggingLevel.INFO, ">>> GenericOrderRouting REACHED! Event received from fhir-router. Body = ${body}")
                 .filter(body().isNotNull())
 
-                // Extract the order UUID from the ServiceRequest body (set by watcher)
-                .process(exchange -> {
-                    Object body = exchange.getMessage().getBody();
-                    String orderUuid = null;
-                    if (body instanceof ServiceRequest) {
-                        ServiceRequest sr = (ServiceRequest) body;
-                        orderUuid = sr.getIdElement().getIdPart();
-                    } else if (body instanceof String) {
-                        orderUuid = (String) body;
-                    }
-                    if (orderUuid == null || orderUuid.isBlank()) {
-                        orderUuid = exchange.getProperty("event.identifier", String.class);
-                    }
-                    exchange.setProperty("ampath.order_uuid", orderUuid);
-                })
-
+                // Extract the order UUID from the Debezium Event object via Camel OGNL
+                .setProperty("ampath.order_uuid", simple("${body.identifier}"))
+                .choice()
+                    .when(exchangeProperty("ampath.order_uuid").isNull())
+                        // Fallback if the body wasn't the event but it's in the property
+                        .setProperty("ampath.order_uuid", simple("${exchangeProperty.event.identifier}"))
+                .end()
+                
+                .log(LoggingLevel.INFO, "Extracted ampath.order_uuid = ${exchangeProperty.ampath.order_uuid} from incoming event")
                 .filter(exchangeProperty("ampath.order_uuid").isNotNull())
 
                 .log(LoggingLevel.INFO,

@@ -151,15 +151,3 @@ jobs:
             ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_OPENMRS_IMAGE }}:${{ steps.vars.outputs.SHORT_SHA }}
             ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_OPENMRS_IMAGE }}:latest
             ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_OPENMRS_IMAGE }}:${{ env.RELEASE_VERSION }}
-
-      - name: Build and push EIP Odoo–AMPATH image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./odoo-docker/target/odoo-build
-          file: ./odoo-docker/target/odoo-build/eip-odoo-ampath-image/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_AMPATH_IMAGE }}:${{ steps.vars.outputs.SHORT_SHA }}
-            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_AMPATH_IMAGE }}:latest
-            ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}-${{ env.EIP_ODOO_AMPATH_IMAGE }}:${{ env.RELEASE_VERSION }}
