@@ -1,13 +1,14 @@
 {
     'name': 'AMPATH Billing',
-    'version': '1.0',
+    'version': '1.0.4',
     'summary': 'Billing module for AMPATH',
     'category': 'Healthcare/Accounting',
     'author': 'AMPATH',
-    'depends': ['sale', 'account'],
+    'depends': ['sale', 'account', 'odoo_initializer'],
     'data': [
         'security/ir.model.access.csv',
         'data/landing_page.xml',
+        'data/company_hierarchy_cron.xml',
         'views/sale_advance_payment_views.xml',
         'views/sale_order_views.xml',
         'views/account_move_views.xml',

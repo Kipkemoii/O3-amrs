@@ -1,0 +1,2 @@
+"id","name","parent_id/id","partner_id/id","currency_id/id"
+"init.kesses_clinic","Kesses Clinic","base.main_company","init.kesses_clinic_partner","base.KES"
