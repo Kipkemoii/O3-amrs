@@ -256,44 +256,26 @@ public class GenericOrderRouting extends RouteBuilder {
                 .log(LoggingLevel.INFO,
                         "GenericOrderRouting: order_type_uuid=${exchangeProperty.generic.order_type_uuid} match=${exchangeProperty.generic.order_type_match}")
 
-                // Skip if the order_type UUID is not in our configured set
-                .filter(exchange -> {
-                    Boolean match = exchange.getProperty("generic.order_type_match", Boolean.class);
-                    return Boolean.TRUE.equals(match);
-                })
-
-                // Skip if we couldn't map required fields
-                .filter(exchange -> {
-                    boolean invalid = Boolean.TRUE.equals(exchange.getProperty("generic.invalid", Boolean.class));
-                    if (invalid) {
-                        String missingFields = exchange.getProperty("generic.missing_fields", String.class);
-                        log.warn("GenericOrderRouting: skipping order {} due to missing fields: {}",
-                                exchange.getProperty("ampath.order_uuid"), missingFields);
-                    }
-                    return !invalid;
-                })
-
-                .log(LoggingLevel.INFO,
-                        "GenericOrderRouting: processing order ${exchangeProperty.ampath.order_uuid}")
-
                 .choice()
-                    // ── Delete / void ────────────────────────────────────────────
+                    // Skip order when required fields are missing.
+                    .when(simple("${exchangeProperty.generic.invalid} == true"))
+                        .log(LoggingLevel.WARN, "GenericOrderRouting: skipping order ${exchangeProperty.ampath.order_uuid} due to missing fields: ${exchangeProperty.generic.missing_fields}")
+
+                    // Delete / void
                     .when(simple("${exchangeProperty.event.operation} == 'd' "
                             + "|| ${exchangeProperty.generic.voided} == 1 "
                             + "|| ${exchangeProperty.generic.order_action} == 'DISCONTINUE'"))
+                        .log(LoggingLevel.INFO, "GenericOrderRouting: processing delete/void order ${exchangeProperty.ampath.order_uuid}")
                         .setHeader("openmrs.fhir.event", constant("d"))
-                        .process(exchange -> {
-                            exchange.getMessage().setBody(buildBundle(exchange));
-                        })
+                        .process(exchange -> exchange.getMessage().setBody(buildBundle(exchange)))
                         .to("direct:service-request-to-sale-order-processor")
 
-                    // ── Create / update ───────────────────────────────────────────
+                    // Create / update
                     .otherwise()
+                        .log(LoggingLevel.INFO, "GenericOrderRouting: processing create/update order ${exchangeProperty.ampath.order_uuid}")
                         .setHeader("openmrs.fhir.event",
                                 simple("${exchangeProperty.event.operation}"))
-                        .process(exchange -> {
-                            exchange.getMessage().setBody(buildBundle(exchange));
-                        })
+                        .process(exchange -> exchange.getMessage().setBody(buildBundle(exchange)))
                         .to("direct:service-request-to-sale-order-processor")
                 .endChoice()
 
