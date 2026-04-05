@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.openmrs</groupId>
+    <artifactId>distro-emr</artifactId>
+    <version>3.6.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <!--
+    Customised EIP Odoo–OpenMRS client based on Ozone eip-odoo-openmrs 2.2.0 (MPL-2.0).
+    Upstream: https://github.com/ozone-his/eip-odoo-openmrs
+    Adds REST + synthetic ServiceRequest for order types not exposed reliably by OpenMRS FHIR 2 (EIP_ORDER_TYPE_UUIDS / eip.order.type.uuids).
+  -->
+  <groupId>com.ampath</groupId>
+  <artifactId>eip-odoo-openmrs-ampath</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>AMPATH customised EIP Odoo–OpenMRS</name>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <camel.version>4.1.0</camel.version>
+    <camel.openmrs.fhir.version>4.2.0</camel.openmrs.fhir.version>
+    <spring-boot.version>3.1.4</spring-boot.version>
+    <lombok.version>1.18.30</lombok.version>
+    <fhir-r4.version>7.0.0</fhir-r4.version>
+    <xmlRpcClientVersion>3.1.3</xmlRpcClientVersion>
+    <dependencyReportClassifier>dependencies</dependencyReportClassifier>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.openmrs.eip</groupId>
+      <artifactId>camel-openmrs-fhir</artifactId>
+      <version>${camel.openmrs.fhir.version}</version>
+    </dependency>
+    <!-- Ozone OpenmrsRestClient uses org.springframework.http.* (not always on compile CP from EIP alone). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <version>6.0.12</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.xmlrpc</groupId>
+      <artifactId>xmlrpc-client</artifactId>
+      <version>${xmlRpcClientVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>2.9.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${lombok.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <artifactSet>
+                <includes>
+                  <include>org.openmrs.eip:*</include>
+                  <include>org.apache.xmlrpc:xmlrpc-client</include>
+                  <include>org.liquibase:*</include>
+                  <include>com.ozonehis:*</include>
+                  <include>org.apache.camel:camel-fhir</include>
+                  <include>org.apache.camel:camel-fhir-api</include>
+                  <include>org.apache.commons:*</include>
+                  <include>commons-io:commons-io</include>
+                  <include>ca.uhn.hapi.fhir:*</include>
+                  <include>com.fasterxml.jackson.core:jackson-databind</include>
+                  <include>org.apache.httpcomponents:*</include>
+                  <include>com.google.guava:*</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                    <exclude>META-INF/okio.kotlin_module</exclude>
+                    <exclude>META-INF.versions.9.module-info</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Implementation-Title>${project.name}</Implementation-Title>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                  </manifestEntries>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

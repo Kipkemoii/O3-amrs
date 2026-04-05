@@ -1,0 +1,90 @@
+/*
+ * Forked from openmrs-eip camel-openmrs-fhir 4.2.0 for AMPATH eip-odoo-openmrs-ampath:
+ * routes configured order types (OpenMRS order_type.uuid in eip.order.type.uuids / EIP_ORDER_TYPE_UUIDS) to
+ * direct:ampath-rest-synthetic-servicerequest instead of FHIR R4 read when FHIR does not expose them.
+ */
+package org.openmrs.eip.fhir.routes.resources;
+
+import static org.openmrs.eip.fhir.Constants.HEADER_FHIR_EVENT_TYPE;
+import static org.openmrs.eip.fhir.Constants.IMAGING_ORDER_TYPE_UUID;
+import static org.openmrs.eip.fhir.Constants.PROP_EVENT_OPERATION;
+import static org.openmrs.eip.fhir.Constants.TEST_ORDER_TYPE_UUID;
+
+import org.apache.camel.LoggingLevel;
+import org.openmrs.eip.fhir.FhirResource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import lombok.Setter;
+
+@Component
+@Setter
+public class ServiceRequestRouter extends BaseFhirResourceRouter {
+
+    @Value("${eip.test.order.type.uuid}")
+    private String testOrderTypeUuid;
+
+    @Value("${eip.imaging.order.type.uuid}")
+    private String imagingOrderTypeUuid;
+
+    ServiceRequestRouter() {
+        super(FhirResource.SERVICEREQUEST);
+    }
+
+    @Override
+    public void configure() throws Exception {
+        if (testOrderTypeUuid == null || testOrderTypeUuid.isEmpty()) {
+            testOrderTypeUuid = TEST_ORDER_TYPE_UUID;
+        }
+        if (imagingOrderTypeUuid == null || imagingOrderTypeUuid.isEmpty()) {
+            imagingOrderTypeUuid = IMAGING_ORDER_TYPE_UUID;
+        }
+        from(FhirResource.SERVICEREQUEST.incomingUrl())
+                .routeId("fhir-servicerequest-router")
+                .filter(isSupportedTable())
+                .toD(
+                        "sql:SELECT ot.uuid as uuid from order_type ot join orders o on o.order_type_id = ot.order_type_id where o.uuid ='${exchangeProperty.event.identifier}'?dataSource=#openmrsDataSource")
+                .choice()
+                .when(simple("${body[0]['uuid']} == '" + testOrderTypeUuid + "' || ${body[0]['uuid']} == '"
+                        + imagingOrderTypeUuid + "'"))
+                .log(LoggingLevel.INFO, "Processing ${exchangeProperty.event.tableName} message (FHIR ServiceRequest path)")
+                .toD(
+                        "sql:SELECT voided, order_action, previous_order_id FROM orders WHERE uuid = '${exchangeProperty.event.identifier}'?dataSource=#openmrsDataSource")
+                .choice()
+                .when(simple("${exchangeProperty.event.operation} == 'd' || ${body[0]['voided']} == 1"))
+                .setHeader(HEADER_FHIR_EVENT_TYPE, constant("d"))
+                .setBody(simple("${exchangeProperty.event.identifier}"))
+                .to(FhirResource.SERVICEREQUEST.outgoingUrl())
+                .when(simple("${body[0]['order_action']} == 'DISCONTINUE'"))
+                .toD(
+                        "sql:SELECT uuid FROM orders WHERE order_id = ${body[0]['previous_order_id']}?dataSource=#openmrsDataSource")
+                .toD("fhir:read/resourceById?resourceClass=ServiceRequest&stringId=${body[0]['uuid']}")
+                .setHeader(HEADER_FHIR_EVENT_TYPE, constant("d"))
+                .to(FhirResource.SERVICEREQUEST.outgoingUrl())
+                .otherwise()
+                .toD("fhir:read/resourceById?resourceClass=ServiceRequest&stringId=${exchangeProperty.event.identifier}")
+                .setHeader(HEADER_FHIR_EVENT_TYPE, simple("${exchangeProperty." + PROP_EVENT_OPERATION + "}"))
+                .to(FhirResource.SERVICEREQUEST.outgoingUrl())
+                .endChoice()
+                .when(method("syntheticOrderTypeChecker", "matchesOrderTypeRow"))
+                .log(LoggingLevel.INFO, "Processing ${exchangeProperty.event.tableName} message (REST synthetic ServiceRequest path)")
+                .toD(
+                        "sql:SELECT voided, order_action, previous_order_id FROM orders WHERE uuid = '${exchangeProperty.event.identifier}'?dataSource=#openmrsDataSource")
+                .choice()
+                .when(simple("${exchangeProperty.event.operation} == 'd' || ${body[0]['voided']} == 1"))
+                .setHeader(HEADER_FHIR_EVENT_TYPE, constant("d"))
+                .setBody(simple("${exchangeProperty.event.identifier}"))
+                .to(FhirResource.SERVICEREQUEST.outgoingUrl())
+                .when(simple("${body[0]['order_action']} == 'DISCONTINUE'"))
+                .toD(
+                        "sql:SELECT uuid FROM orders WHERE order_id = ${body[0]['previous_order_id']}?dataSource=#openmrsDataSource")
+                .toD("fhir:read/resourceById?resourceClass=ServiceRequest&stringId=${body[0]['uuid']}")
+                .setHeader(HEADER_FHIR_EVENT_TYPE, constant("d"))
+                .to(FhirResource.SERVICEREQUEST.outgoingUrl())
+                .otherwise()
+                .to("direct:ampath-rest-synthetic-servicerequest")
+                .endChoice()
+                .endChoice()
+                .end();
+    }
+}

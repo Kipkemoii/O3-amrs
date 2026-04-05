@@ -21,8 +21,9 @@
     <odoo.postgres.image>ghcr.io/ampath/o3-amrs-odoo-postgres</odoo.postgres.image>
     <odoo.image>ghcr.io/ampath/o3-amrs-odoo</odoo.image>
     <eip.odoo.openmrs.image>ghcr.io/ampath/o3-amrs-eip-odoo-openmrs</eip.odoo.openmrs.image>
+    <eip.odoo.openmrs.ampath.image>ghcr.io/ampath/o3-amrs-eip-odoo-openmrs-ampath</eip.odoo.openmrs.ampath.image>
     <skip.docker.build>false</skip.docker.build>
-    <eip.odoo.ampath.version>1.0.0-SNAPSHOT</eip.odoo.ampath.version>
+    <eip.odoo.openmrs.ampath.version>1.0.0-SNAPSHOT</eip.odoo.openmrs.ampath.version>
   </properties>
 
   <dependencies>
@@ -105,11 +106,11 @@
                     <include name="data/**" />
                   </fileset>
                 </copy>
-                <!-- AMPATH fat JAR into its own image directory (not mixed with stock eip-odoo-openmrs) -->
-                <mkdir dir="${odoo.build}/binaries/eip-odoo-ampath-image" />
+                <!-- Customised full Ozone EIP (REST + synthetic ServiceRequest for EIP_ORDER_TYPE_UUIDS); alternative to stock eip-odoo-openmrs image -->
+                <mkdir dir="${odoo.build}/binaries/eip-odoo-openmrs-ampath-image" />
                 <copy
-                  file="${project.basedir}/../eip-odoo-ampath/target/eip-odoo-ampath-${eip.odoo.ampath.version}.jar"
-                  todir="${odoo.build}/binaries/eip-odoo-ampath-image"
+                  file="${project.basedir}/../eip-odoo-openmrs-ampath/target/eip-odoo-openmrs-ampath-${eip.odoo.openmrs.ampath.version}.jar"
+                  todir="${odoo.build}/binaries/eip-odoo-openmrs-ampath-image"
                   overwrite="true"
                   failonerror="true" />
               </target>
@@ -160,7 +161,7 @@
                     <include>postgresql/Dockerfile</include>
                     <include>odoo/Dockerfile</include>
                     <include>eip-odoo-openmrs/Dockerfile</include>
-                    <include>eip-odoo-ampath-image/Dockerfile</include>
+                    <include>eip-odoo-openmrs-ampath-image/Dockerfile</include>
                   </includes>
                   <targetPath>.</targetPath>
                 </resource>
@@ -252,7 +253,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>docker-build-eip-odoo-ampath</id>
+            <id>docker-build-eip-odoo-openmrs-ampath</id>
             <phase>package</phase>
             <goals>
               <goal>exec</goal>
@@ -263,11 +264,11 @@
               <arguments>
                 <argument>build</argument>
                 <argument>-f</argument>
-                <argument>eip-odoo-ampath-image/Dockerfile</argument>
+                <argument>eip-odoo-openmrs-ampath-image/Dockerfile</argument>
                 <argument>-t</argument>
-                <argument>ghcr.io/ampath/o3-amrs-eip-odoo-ampath:${project.version}</argument>
+                <argument>${eip.odoo.openmrs.ampath.image}:${project.version}</argument>
                 <argument>-t</argument>
-                <argument>ghcr.io/ampath/o3-amrs-eip-odoo-ampath:latest</argument>
+                <argument>${eip.odoo.openmrs.ampath.image}:latest</argument>
                 <argument>.</argument>
               </arguments>
               <workingDirectory>${project.build.directory}/odoo-build</workingDirectory>

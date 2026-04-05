@@ -252,7 +252,7 @@
     <profile>
       <id>odoo-docker</id>
       <modules>
-        <module>eip-odoo-ampath</module>
+        <module>eip-odoo-openmrs-ampath</module>
         <module>odoo-docker</module>
       </modules>
     </profile>
