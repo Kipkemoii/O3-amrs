@@ -1,0 +1,8 @@
+"id","key","value"
+"lots","stock.lot_serial","True"
+"expiration","stock.use_expiration_dates","True"
+"uom","product.group_uom","True"
+"locations","stock.group_stock_multi_locations","True"
+"multi_steps","stock.group_stock_multi_steps","True"
+"pricelist","sale.group_sale_pricelist","True"
+"report_url","report.url","http://127.0.0.1:8069"
