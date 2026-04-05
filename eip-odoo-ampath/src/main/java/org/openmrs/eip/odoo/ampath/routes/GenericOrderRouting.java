@@ -19,26 +19,26 @@ import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.ServiceRequest;
 
 /**
- * Standalone route that consumes {@code direct:fhir-servicerequest} and processes
- * radiology/procedure order events from the OpenMRS Debezium stream.
+ * Intercepts {@code direct:fhir-handler-servicerequest} and processes selected order types
+ * (radiology / procedure / consultation cash, etc.) from the OpenMRS Debezium stream.
  *
  * <h3>Why this exists</h3>
- * The OpenMRS FHIR 2 module does not map radiology/procedure order types to
- * {@code ServiceRequest} resources.  Instead of attempting FHIR reads (which always
- * return 404), this route fetches order data directly via the OpenMRS REST Orders API,
- * builds a synthetic FHIR {@link Bundle}, and sends it to the existing
- * {@code ServiceRequestProcessor} pipeline for Odoo sale order creation.
+ * The OpenMRS FHIR 2 module does not map these order types to {@code ServiceRequest}
+ * resources. Instead of FHIR reads (which return 404), this route fetches order data via
+ * the OpenMRS REST Orders API, builds a synthetic FHIR {@link Bundle}, and sends it to
+ * {@code ServiceRequestProcessor} for Odoo sale orders.
  *
  * <h3>Flow</h3>
  * <pre>
- * Debezium watcher (orders table)
- *   → direct:fhir-servicerequest (body = ServiceRequest with order UUID as ID)
- *   → Extract order UUID from ServiceRequest ID
- *   → REST: fetch order via OpenMRS REST API
- *   → Filter: order_type UUID in EIP_GENERIC_ORDER_TYPE_UUIDS
- *   → Build synthetic ServiceRequest bundle
- *   → direct:service-request-to-sale-order-processor → ServiceRequestProcessor (Odoo)
+ * Debezium (orders) → dispatch to direct:fhir-handler-servicerequest
+ *   → intercept (replaces stock ServiceRequestRouter entry)
+ *   → REST fetch order by UUID → filter by eip.generic.order.type.uuids
+ *   → direct:service-request-to-sale-order-processor
  * </pre>
+ *
+ * <p>Without the order-type filter, every order dispatched to the ServiceRequest handler
+ * would reach Odoo and could create extra draft quotations per visit (unlike
+ * {@code ServiceRequestRouter} in {@code eip-odoo-openmrs}, which filters by type first).</p>
  *
  * <h3>Configuration</h3>
  * <pre>
@@ -260,6 +260,12 @@ public class GenericOrderRouting extends RouteBuilder {
                     // Skip order when required fields are missing.
                     .when(simple("${exchangeProperty.generic.invalid} == true"))
                         .log(LoggingLevel.WARN, "GenericOrderRouting: skipping order ${exchangeProperty.ampath.order_uuid} due to missing fields: ${exchangeProperty.generic.missing_fields}")
+
+                    // Mirror stock ServiceRequestRouter: only configured order types sync to Odoo.
+                    .when(simple("${exchangeProperty.generic.order_type_match} == false"))
+                        .log(LoggingLevel.DEBUG,
+                                "GenericOrderRouting: skipping order ${exchangeProperty.ampath.order_uuid} — order type "
+                                        + "${exchangeProperty.generic.order_type_uuid} not in eip.generic.order.type.uuids")
 
                     // Delete / void
                     .when(simple("${exchangeProperty.event.operation} == 'd' "
