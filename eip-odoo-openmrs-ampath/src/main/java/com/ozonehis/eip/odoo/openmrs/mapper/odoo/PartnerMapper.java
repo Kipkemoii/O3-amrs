@@ -21,7 +21,9 @@ import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Setter
 @Component
@@ -39,6 +41,9 @@ public class PartnerMapper implements ToOdooMapping<Patient, Partner> {
     @Autowired
     private CountryStateHandler countryStateHandler;
 
+    @Value("${eip.odoo.partner.append-identifier-to-name:true}")
+    private boolean appendIdentifierToPartnerName;
+
     @Override
     public Partner toOdoo(Patient patient) {
         if (patient == null) {
@@ -48,10 +53,13 @@ public class PartnerMapper implements ToOdooMapping<Patient, Partner> {
         partner.setPartnerRef(patient.getIdPart());
         partner.setPartnerActive(patient.getActive());
         String patientName = getPatientName(patient).orElse("");
-        String patientIdentifier = getPreferredPatientIdentifier(patient).orElse("");
+        String patientIdentifier = getIdentifierForPartnerDisplay(patient).orElse("");
         partner.setPartnerComment(patientIdentifier);
         partner.setPartnerExternalId(patientIdentifier);
-        partner.setPartnerName(patientName);
+        partner.setPartnerName(
+                appendIdentifierToPartnerName
+                        ? formatPartnerDisplayName(patientName, patientIdentifier)
+                        : patientName);
         partner.setPartnerBirthDate(
                 OdooUtils.convertEEEMMMddDateToOdooFormat(patient.getBirthDate().toString()));
 
@@ -59,11 +67,42 @@ public class PartnerMapper implements ToOdooMapping<Patient, Partner> {
         return partner;
     }
 
-    protected Optional<String> getPreferredPatientIdentifier(Patient patient) {
+    /**
+     * Patient identifier shown on the Odoo partner and appended to the display name: FHIR {@code USUAL}
+     * (preferred) first, then {@code OFFICIAL}, then any first non-blank value.
+     */
+    protected Optional<String> getIdentifierForPartnerDisplay(Patient patient) {
+        if (patient == null || !patient.hasIdentifier()) {
+            return Optional.empty();
+        }
+        return firstIdentifierWithUse(patient, Identifier.IdentifierUse.USUAL)
+                .or(() -> firstIdentifierWithUse(patient, Identifier.IdentifierUse.OFFICIAL))
+                .or(() -> patient.getIdentifier().stream()
+                        .filter(Identifier::hasValue)
+                        .map(Identifier::getValue)
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .findFirst());
+    }
+
+    private static Optional<String> firstIdentifierWithUse(Patient patient, Identifier.IdentifierUse use) {
         return patient.getIdentifier().stream()
-                .filter(identifier -> identifier.getUse() == Identifier.IdentifierUse.OFFICIAL)
-                .findFirst()
-                .map(Identifier::getValue);
+                .filter(i -> i.hasValue() && use.equals(i.getUse()))
+                .map(Identifier::getValue)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .findFirst();
+    }
+
+    static String formatPartnerDisplayName(String patientName, String identifier) {
+        if (!StringUtils.hasText(identifier)) {
+            return patientName != null ? patientName : "";
+        }
+        String id = identifier.trim();
+        if (!StringUtils.hasText(patientName)) {
+            return "(" + id + ")";
+        }
+        return patientName.trim() + " (" + id + ")";
     }
 
     protected Optional<String> getPatientName(Patient patient) {
