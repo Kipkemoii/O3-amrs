@@ -1,0 +1,2 @@
+"id","name","currency_id/id","email","website","logo","parent_id/id","partner_id/id","sequence"
+"init.kesses_company","Kesses","base.KES","","","","base.main_company","init.kesses_partner","10"

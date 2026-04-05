@@ -77,6 +77,13 @@ services:
 
   # ---------- Odoo ----------
   # Use AMPATH-built image (Ozone config + addons) or override with ODOO_IMAGE
+  #
+  # Multi-company note: Odoo caches res.users._get_company_ids() per process. If you
+  # attach companies with raw SQL on res_company_users_rel (or the DB gets out of sync
+  # with the UI), RPC context allowed_company_ids can fail with "Access to unauthorized
+  # or invalid companies." Fix: assign Allowed companies via Settings → Users (ORM path
+  # refreshes cache and links base.group_multi_company), or restart Odoo after SQL, and
+  # clear the site cookie "cids" / hard-refresh.
   odoo:
     depends_on:
       postgresql:
@@ -95,7 +102,8 @@ services:
     volumes:
       - "${ODOO_FILESTORE:-odoo-filestore}:/var/lib/odoo/filestore"
      # - "${ODOO_EXTRA_ADDONS:-odoo-extra-addons}:/mnt/extra-addons"
-      #- "${ODOO_CONFIG_PATH:-odoo-config}:/mnt/odoo_config"
+      # Local initializer CSVs + initializer_config.json (repo distro); override with ODOO_INITIALIZER_CONFIG
+      - "${ODOO_INITIALIZER_CONFIG:-./distro/config/odoo/initializer_config}:/mnt/odoo_config"
       - "${ODOO_CONFIG_CHECKSUMS_PATH:-odoo-checksums}:/mnt/checksums"
 
   # ---------- FHIR Odoo facade ----------

@@ -1,3 +1,2 @@
 "id","name","currency_id/id","email","website","logo","parent_id/id","partner_id/id","sequence"
 "base.main_company","AMPATH Kenya","base.KES","ampathkenya.org","https://www.ampathkenya.org/","","","base.main_partner",""
-"init.e93d79ea-13c8-4f0c-a757-0858a7f387eb","Kesses","base.KES","","","","base.main_company","init.e93d79ea-13c8-4f0c-a757-0858a7f387eb_partner","10"

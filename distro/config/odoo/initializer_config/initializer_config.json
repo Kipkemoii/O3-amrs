@@ -11,6 +11,11 @@
             "field_rules": {}
         },
         {
+            "model_name": "res.users",
+            "folder": "users",
+            "field_rules": {}
+        },
+        {
             "model_name": "ir.config_parameter",
             "folder": "config",
             "field_rules": {}
@@ -22,7 +27,7 @@
         },
         {
             "model_name": "stock.location",
-            "folder": "location",
+            "folder": "stock_location",
             "field_rules": {}
         },
         {
